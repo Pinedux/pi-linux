@@ -1,0 +1,20 @@
+# Logs
+*.log
+/tmp/
+
+# Backups
+*.bak
+*.backup
+
+# Testing
+/test/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
