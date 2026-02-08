@@ -23,13 +23,13 @@
 ### Método 1: One-Liner (Recomendado)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Pinedux/pi-linux/main/install.sh | sudo bash
 ```
 
 ### Método 2: Clonar Repositorio
 
 ```bash
-git clone https://github.com/TU_USUARIO/pi-linux.git
+git clone https://github.com/Pinedux/pi-linux.git
 cd pi-linux
 sudo ./pi-linux.sh
 ```
@@ -37,7 +37,7 @@ sudo ./pi-linux.sh
 ### Método 3: Descargar y Ejecutar
 
 ```bash
-wget https://github.com/TU_USUARIO/pi-linux/archive/main.tar.gz
+wget https://github.com/Pinedux/pi-linux/archive/main.tar.gz
 tar -xzf main.tar.gz
 cd pi-linux-main
 sudo ./pi-linux.sh
@@ -226,7 +226,7 @@ MIT License - Ver [LICENSE](LICENSE)
 
 ## 📞 Contacto
 
-- GitHub Issues: [github.com/TU_USUARIO/pi-linux/issues](https://github.com/TU_USUARIO/pi-linux/issues)
+- GitHub Issues: [github.com/Pinedux/pi-linux/issues](https://github.com/Pinedux/pi-linux/issues)
 - Discord: [Tu servidor de Discord]
 
 ---

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Pi-Linux One-Line Installer
-# curl -fsSL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/install.sh | sudo bash
+# curl -fsSL https://raw.githubusercontent.com/Pinedux/pi-linux/main/install.sh | sudo bash
 
 set -e
 
-REPO_URL="https://github.com/TU_USUARIO/pi-linux"
+REPO_URL="https://github.com/Pinedux/pi-linux"
 INSTALL_DIR="/tmp/pi-linux-$$"
 
 echo "🥧 Pi-Linux Installer"
