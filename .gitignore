@@ -1,0 +1,30 @@
+# Archivos temporales
+*.tmp
+*.log
+*.bak
+*.old
+*.swp
+*.swo
+*~
+
+# ISO y builds
+iso-output/
+*.iso
+*.img
+*.zst
+
+# archiso workdir
+/tmp/archiso-tmp/
+work/
+out/
+
+# Dependencias descargadas
+node_modules/
+
+# Configuraciones locales
+.env
+.local/
+
+# Backups de config
+*.backup
+*.bak.*

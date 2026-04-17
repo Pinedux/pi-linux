@@ -1,0 +1,117 @@
+# Base archiso
+base
+linux
+linux-firmware
+mkinitcpio
+mkinitcpio-archiso
+
+# Sistema
+base-devel
+sudo
+grub
+efibootmgr
+os-prober
+
+# Red
+networkmanager
+iwd
+openssh
+curl
+wget
+
+# Almacenamiento
+parted
+gparted
+dosfstools
+ntfs-3g
+btrfs-progs
+lvm2
+
+# Compresión y utilidades
+zstd
+pv
+rsync
+reflector
+
+# TUI / Interfaz texto
+libnewt
+whiptail
+dialog
+
+# Terminal y editors
+neovim
+nano
+htop
+btop
+git
+
+# Fuentes
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+
+# Xorg / Wayland base
+xorg-server
+xorg-xinit
+mesa
+mesa-utils
+vulkan-tools
+
+# Drivers GPU (todos para detección en live)
+nvidia-dkms
+nvidia-utils
+nvidia-settings
+xf86-video-amdgpu
+xf86-video-intel
+xf86-video-vesa
+xf86-video-fbdev
+
+# Hyprland deps (para poder probar en live)
+hyprland
+waybar
+wofi
+kitty
+mako
+libnotify
+grim
+slurp
+wl-clipboard
+cliphist
+swww
+swaylock-effects
+swayidle
+polkit-kde-agent
+xdg-desktop-portal-hyprland
+brightnessctl
+pamixer
+pavucontrol
+
+# Plasma deps
+plasma-meta
+kde-applications-meta
+sddm
+sddm-kcm
+kvantum
+
+# GNOME deps
+gnome
+gnome-extra
+gnome-tweaks
+gnome-shell-extensions
+
+# Temas y fuentes adicionales
+papirus-icon-theme
+bibata-cursor-theme
+
+# Utilidades varias
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+bluez
+bluez-utils
+blueman
+
+# Docker (opcional en live)
+docker
+docker-compose

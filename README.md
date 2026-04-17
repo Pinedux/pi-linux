@@ -232,4 +232,92 @@ MIT License — Libre para usar y modificar
 
 ---
 
+## 🌐 Instalación vía curl (one-liner)
+
+Una vez subido a GitHub, podrás instalar Pi-Linux directamente con:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/pi-linux.sh)
+```
+
+O el modo TUI:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/scripts/tui.sh)
+```
+
+> **Nota:** Reemplaza `TU_USUARIO` con tu usuario de GitHub antes de usar.
+
+---
+
+## 💿 Crear ISO Live con Pi-Linux
+
+Pi-Linux incluye un perfil de **archiso** para generar una ISO live que arranca directamente en el instalador TUI.
+
+### Requisitos
+
+```bash
+sudo pacman -S archiso qemu-desktop
+```
+
+### Compilar la ISO
+
+```bash
+cd ~/www/pi_linux
+sudo ./build-iso.sh build
+```
+
+La ISO se generará en `iso-output/`.
+
+### Probar la ISO
+
+```bash
+# Modo BIOS
+sudo ./build-iso.sh test
+
+# Modo UEFI
+run_archiso -u -i iso-output/pi-linux-*.iso
+```
+
+### Grabar en USB
+
+```bash
+sudo dd if=iso-output/pi-linux-*.iso of=/dev/sdX bs=4M status=progress
+```
+
+### ¿Qué incluye la ISO?
+
+- ✅ Arch Linux live con kernel LTS
+- ✅ Autologin en `tty1` como root
+- ✅ TUI de Pi-Linux arranca automáticamente
+- ✅ Drivers GPU (NVIDIA, AMD, Intel)
+- ✅ Entornos de escritorio pre-descargados (Plasma, GNOME, Hyprland)
+- ✅ Conexión de red automática via NetworkManager
+- ✅ Clona el repo desde GitHub y ejecuta el instalador
+
+---
+
+## 📤 Subir a GitHub
+
+Si aún no has configurado el remote:
+
+```bash
+# 1. Crear repo en GitHub (vacío, sin README)
+# 2. En tu terminal:
+cd ~/www/pi_linux
+git remote add origin https://github.com/TU_USUARIO/pi-linux.git
+git branch -M main
+git push -u origin main
+```
+
+Para actualizar después de cambios:
+
+```bash
+git add -A
+git commit -m "feat: descripción del cambio"
+git push
+```
+
+---
+
 **Hecho con ❤️ para la comunidad Linux**

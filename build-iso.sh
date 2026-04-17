@@ -1,0 +1,170 @@
+#!/bin/bash
+# Pi-Linux ISO Builder
+# Compila una ISO live de Arch Linux con el instalador Pi-Linux integrado
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROFILE_DIR="${SCRIPT_DIR}/archiso"
+OUTPUT_DIR="${SCRIPT_DIR}/iso-output"
+WORK_DIR="/tmp/archiso-tmp"
+
+# ============================================
+# VERIFICAR DEPENDENCIAS
+# ============================================
+
+check_deps() {
+    if ! command -v mkarchiso &>/dev/null; then
+        echo ""
+        echo "⚠  mkarchiso no encontrado."
+        echo "   Instala archiso con:"
+        echo "      sudo pacman -S archiso"
+        echo ""
+        exit 1
+    fi
+    
+    if [[ $EUID -ne 0 ]]; then
+        echo ""
+        echo "⚠  Este script debe ejecutarse como root (sudo)"
+        echo ""
+        exit 1
+    fi
+}
+
+# ============================================
+# MENÚ
+# ============================================
+
+print_banner() {
+    clear
+    echo ""
+    echo "    ____  _       __    _           __  _"
+    echo "   / __ \\(_)___ _/ /_  (_)_________/ /_(_)___  ___"
+    echo "  / /_/ / / __ '/ __ \\/ / ___/ ___/ __/ / __ \\/ _ \\"
+    echo " / ____/ / /_/ / / / / (__  |__  ) /_/ / / / /  __/"
+    echo "/_/   /_/\\__, /_/ /_/_/____/____/\\__/_/_/ /_/\\___/"
+    echo "        /____/"
+    echo ""
+    echo "    🥧  Pi-Linux ISO Builder"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+}
+
+# ============================================
+# BUILD
+# ============================================
+
+build_iso() {
+    print_banner
+    
+    echo "[*] Perfil:   $PROFILE_DIR"
+    echo "[*] Trabajo:  $WORK_DIR"
+    echo "[*] Salida:   $OUTPUT_DIR"
+    echo ""
+    
+    # Limpiar trabajo anterior
+    if [[ -d "$WORK_DIR" ]]; then
+        echo "[*] Limpiando directorio de trabajo..."
+        rm -rf "$WORK_DIR"
+    fi
+    
+    mkdir -p "$OUTPUT_DIR"
+    
+    echo "[*] Compilando ISO (esto puede tardar 15-30 min)..."
+    echo ""
+    
+    mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+    
+    echo ""
+    echo "========================================"
+    echo "  ✅ ISO compilada exitosamente!"
+    echo "========================================"
+    echo ""
+    
+    local iso_file
+    iso_file=$(ls -1t "$OUTPUT_DIR"/*.iso 2>/dev/null | head -n 1)
+    
+    if [[ -n "$iso_file" ]]; then
+        echo "📀 ISO: $iso_file"
+        echo "📏 Tamaño: $(du -h "$iso_file" | cut -f1)"
+        echo ""
+        echo "🚀 Para probar en QEMU:"
+        echo "      run_archiso -i '$iso_file'"
+        echo ""
+        echo "🖥️  Para probar en QEMU (UEFI):"
+        echo "      run_archiso -u -i '$iso_file'"
+        echo ""
+        echo "💿 Para grabar en USB:"
+        echo "      sudo dd if='$iso_file' of=/dev/sdX bs=4M status=progress"
+    else
+        echo "⚠  No se encontró el archivo ISO en $OUTPUT_DIR"
+    fi
+    echo ""
+}
+
+# ============================================
+# TEST
+# ============================================
+
+test_iso() {
+    print_banner
+    
+    local iso_file
+    iso_file=$(ls -1t "$OUTPUT_DIR"/*.iso 2>/dev/null | head -n 1)
+    
+    if [[ -z "$iso_file" ]]; then
+        echo "⚠  No hay ISOs en $OUTPUT_DIR"
+        echo "   Compila primero con: sudo ./build-iso.sh build"
+        exit 1
+    fi
+    
+    echo "[*] Probando ISO: $iso_file"
+    echo ""
+    
+    read -rp "¿Modo UEFI? [s/N]: " uefi_mode
+    
+    if [[ "$uefi_mode" == "s" || "$uefi_mode" == "S" ]]; then
+        run_archiso -u -i "$iso_file"
+    else
+        run_archiso -i "$iso_file"
+    fi
+}
+
+# ============================================
+# CLEAN
+# ============================================
+
+clean_all() {
+    print_banner
+    echo "[*] Limpiando..."
+    rm -rf "$WORK_DIR"
+    rm -rf "$OUTPUT_DIR"
+    echo "[✓] Limpieza completada"
+}
+
+# ============================================
+# MAIN
+# ============================================
+
+check_deps
+
+case "${1:-}" in
+    build)
+        build_iso
+        ;;
+    test)
+        test_iso
+        ;;
+    clean)
+        clean_all
+        ;;
+    *)
+        print_banner
+        echo "Uso:"
+        echo "  sudo ./build-iso.sh build    # Compilar la ISO"
+        echo "  sudo ./build-iso.sh test     # Probar la última ISO en QEMU"
+        echo "  sudo ./build-iso.sh clean    # Limpiar archivos temporales"
+        echo ""
+        ;;
+esac
