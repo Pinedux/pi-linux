@@ -249,6 +249,10 @@ Resumen de la instalación:
   GPU:     $gpu
   SDDM:    sddm-astronaut-theme
 
+  ⏱️  Tiempo estimado: 20-40 minutos
+  💾 Espacio en disco: ~8 GB
+  🌐 Descarga estimada: ~4-6 GB
+
 ¿Iniciar instalación?"; then
         return 0
     else
@@ -275,12 +279,14 @@ step_running() {
     ) &
     local pid=$!
     
-    while kill -0 $pid 2>/dev/null; do
-        local lastline
-        lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
-        echo -e "XXX\n0\nInstalando Pi-Linux:\n  DE:   $de\n  Rice: $rice\n\n$lastline\nXXX"
-        sleep 2
-    done
+    {
+        while kill -0 $pid 2>/dev/null; do
+            local lastline
+            lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
+            echo -e "XXX\n0\nInstalando Pi-Linux:\n  DE:   $de\n  Rice: $rice\n\n$lastline\nXXX"
+            sleep 2
+        done
+    } | $TUI $ARGS --title "Instalando Pi-Linux" --gauge "\nIniciando instalación..." $((H + 6)) $W 0
     
     wait $pid
     local exit_code=$?
@@ -320,7 +326,8 @@ step_rerun_menu() {
     choice=$(tui_menu "¿Qué deseas hacer?" "Elige una opción:" \
         "addon"     "Instalar software adicional (faltante)" \
         "full"      "Ejecutar instalación completa de nuevo" \
-        "summary"   "Ver resumen de instalación previa")
+        "summary"   "Ver resumen de instalación previa" \
+        "reset"     "Resetear historial de instalación")
     echo "$choice"
 }
 
@@ -437,12 +444,14 @@ run_addon_modules() {
             local basename_module
             basename_module=$(basename "$module")
             
-            while kill -0 $pid 2>/dev/null; do
-                local lastline
-                lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
-                echo -e "XXX\n0\nInstalando software adicional...\n$basename_module\n\n$lastline\nXXX"
-                sleep 2
-            done
+            {
+                while kill -0 $pid 2>/dev/null; do
+                    local lastline
+                    lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
+                    echo -e "XXX\n0\nInstalando software adicional...\n$basename_module\n\n$lastline\nXXX"
+                    sleep 2
+                done
+            } | $TUI $ARGS --title "Software Adicional" --gauge "\nInstalando..." $((H + 6)) $W 0
             
             wait $pid
         fi
@@ -509,6 +518,14 @@ instalados correctamente."
   GPU: $summary_gpu
 
 Pulsa OK para volver al menú principal."
+                main "$@"
+                return
+                ;;
+            reset)
+                if tui_yesno "Confirmar" "¿Borrar el historial de instalación previa?\n\nEsto hará que la próxima ejecución sea como la primera vez."; then
+                    rm -f "$PI_TRACKER_FILE"
+                    tui_msg "Completado" "Historial de instalación borrado."
+                fi
                 main "$@"
                 return
                 ;;

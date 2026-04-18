@@ -8,7 +8,7 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODULES_DIR="$SCRIPT_DIR/modules"
 LIB_DIR="$SCRIPT_DIR/lib"
-VERSION="2.0.0"
+VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "2.0.0")"
 
 # Cargar librería común
 source "${LIB_DIR}/pi-linux-common.sh"
@@ -72,6 +72,8 @@ show_menu() {
     echo -e "  ${CYAN}1)${NC} Modo Automático (KDE Plasma + Sweet)"
     echo -e "  ${CYAN}2)${NC} Modo Interactivo Avanzado (Elige DE + Rice + GPU)"
     echo -e "  ${CYAN}3)${NC} Modo Rice Express (Hyprland HyDE / GNOME WhiteSur / Plasma Sweet)"
+    echo ""
+    echo -e "  ${CYAN}4)${NC} Resetear historial de instalación"
     echo ""
     echo -e "  ${RED}0)${NC} Salir"
     echo ""
@@ -471,6 +473,10 @@ show_summary() {
     echo "  GPU:     $GPU_TYPE"
     echo "  SDDM:    sddm-astronaut-theme (unificado)"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "  ⏱️  Tiempo estimado: 20-40 minutos"
+    echo "  💾 Espacio en disco: ~8 GB"
+    echo "  🌐 Descarga estimada: ~4-6 GB"
 }
 
 # ============================================
@@ -519,12 +525,13 @@ run_modules() {
 # ============================================
 
 main() {
-    local FORCE_YES=false
+    FORCE_YES=false
     for arg in "$@"; do
         case "$arg" in
             --yes) FORCE_YES=true ;;
         esac
     done
+    export FORCE_YES
     
     check_root
     check_arch
@@ -546,8 +553,7 @@ main() {
             passwd "$USERNAME"
         fi
         
-        # Recargar librería con el usuario del config
-        source "${LIB_DIR}/pi-linux-common.sh"
+        # Librería ya cargada al inicio
         
         show_summary
         if [[ "$FORCE_YES" == true ]]; then
@@ -562,14 +568,13 @@ main() {
         # Detectar si ya se ejecutó anteriormente
         if tracker_was_run; then
             show_re_run_menu
-            read -rp "Selecciona [0-3]: " re_choice
+            read -rp "Selecciona [0-4]: " re_choice
             
             case $re_choice in
                 1)
                     info "Modo software adicional"
                     if select_addon_software; then
-                        # Recargar librería
-                        source "${LIB_DIR}/pi-linux-common.sh"
+                        # Librería ya cargada al inicio
                         run_addon_modules
                         tracker_save_installation
                         echo ""
@@ -585,6 +590,20 @@ main() {
                     ;;
                 3)
                     tracker_show_summary
+                    echo ""
+                    read -rp "Pulsa Enter para continuar..."
+                    main "$@"
+                    return
+                    ;;
+                4)
+                    echo ""
+                    read -rp "¿Borrar el historial de instalación previa? [s/N]: " confirm_reset
+                    if [[ "$confirm_reset" == "s" || "$confirm_reset" == "S" ]]; then
+                        rm -f "$PI_TRACKER_FILE"
+                        success "Historial de instalación borrado. La próxima ejecución será como la primera vez."
+                    else
+                        info "Cancelado."
+                    fi
                     echo ""
                     read -rp "Pulsa Enter para continuar..."
                     main "$@"
@@ -627,8 +646,7 @@ main() {
             select_username
         fi
         
-        # Recargar librería con el usuario actualizado
-        source "${LIB_DIR}/pi-linux-common.sh"
+        # Librería ya cargada al inicio
         
         show_summary
         if [[ "$FORCE_YES" == true ]]; then

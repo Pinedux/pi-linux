@@ -28,3 +28,7 @@ node_modules/
 # Backups de config
 *.backup
 *.bak.*
+
+# AIROOTFS: scripts sincronizados en build time (NO versionar copias)
+archiso/airootfs/usr/share/pi-linux/
+

@@ -295,11 +295,14 @@ tracker_mark_installed() {
     tracker_init
     (
         flock -x 200
+        local tmpfile="${PI_TRACKER_FILE}.tmp.$$"
         if grep -q "^${key}=" "$PI_TRACKER_FILE"; then
-            sed -i "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE"
+            sed "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE" > "$tmpfile"
         else
-            echo "${key}=\"${value}\"" >> "$PI_TRACKER_FILE"
+            cp "$PI_TRACKER_FILE" "$tmpfile"
+            echo "${key}=\"${value}\"" >> "$tmpfile"
         fi
+        mv "$tmpfile" "$PI_TRACKER_FILE"
     ) 200>>"$PI_TRACKER_FILE"
 }
 
@@ -332,11 +335,14 @@ tracker_set_var() {
     tracker_init
     (
         flock -x 200
+        local tmpfile="${PI_TRACKER_FILE}.tmp.$$"
         if grep -q "^${key}=" "$PI_TRACKER_FILE"; then
-            sed -i "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE"
+            sed "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE" > "$tmpfile"
         else
-            echo "${key}=\"${value}\"" >> "$PI_TRACKER_FILE"
+            cp "$PI_TRACKER_FILE" "$tmpfile"
+            echo "${key}=\"${value}\"" >> "$tmpfile"
         fi
+        mv "$tmpfile" "$PI_TRACKER_FILE"
     ) 200>>"$PI_TRACKER_FILE"
 }
 

@@ -56,6 +56,31 @@ print_banner() {
 # BUILD
 # ============================================
 
+sync_airootfs() {
+    local src_dir="${SCRIPT_DIR}"
+    local dst_dir="${PROFILE_DIR}/airootfs/usr/share/pi-linux"
+
+    echo "[*] Sincronizando scripts a airootfs..."
+    mkdir -p "${dst_dir}"/modules
+    mkdir -p "${dst_dir}"/lib
+    mkdir -p "${dst_dir}"/config
+    mkdir -p "${dst_dir}"/scripts
+
+    cp -v "${src_dir}/pi-linux.sh" "${dst_dir}/pi-linux.sh"
+    cp -v "${src_dir}/lib/pi-linux-common.sh" "${dst_dir}/lib/"
+    cp -v "${src_dir}/config/unattended.conf" "${dst_dir}/config/"
+    cp -v "${src_dir}/scripts/tui.sh" "${dst_dir}/scripts/" 2>/dev/null || true
+    cp -v "${src_dir}/scripts/pi-linux-firstboot.sh" "${dst_dir}/scripts/" 2>/dev/null || true
+    cp -v "${src_dir}/scripts/pi-linux-firstboot.service" "${dst_dir}/scripts/" 2>/dev/null || true
+
+    for mod in "${src_dir}"/modules/*.sh; do
+        cp -v "$mod" "${dst_dir}/modules/"
+    done
+
+    chmod +x "${dst_dir}/pi-linux.sh"
+    chmod +x "${dst_dir}/modules/"*.sh
+}
+
 build_iso() {
     print_banner
     
@@ -77,6 +102,8 @@ build_iso() {
     
     echo "[*] Compilando ISO Pi-Linux v${VERSION} (esto puede tardar 15-30 min)..."
     echo ""
+    
+    sync_airootfs
     
     mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
     
