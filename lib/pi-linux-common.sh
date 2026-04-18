@@ -255,3 +255,109 @@ pi_backup() {
         info "Backup creado: $backup"
     fi
 }
+
+# ============================================
+# INSTALLATION TRACKER
+# ============================================
+
+PI_TRACKER_DIR="/var/lib/pi-linux"
+PI_TRACKER_FILE="${PI_TRACKER_DIR}/installed.conf"
+
+tracker_init() {
+    mkdir -p "$PI_TRACKER_DIR"
+    if [[ ! -f "$PI_TRACKER_FILE" ]]; then
+        cat > "$PI_TRACKER_FILE" <<EOF
+# Pi-Linux Installation Tracker
+# Generated automatically. Do not edit manually.
+
+INSTALL_DATE=""
+DESKTOP_ENV=""
+RICE_TYPE=""
+GPU_TYPE=""
+USERNAME=""
+
+# Software flags (y = installed, n = skipped/failed)
+EOF
+    fi
+}
+
+tracker_was_run() {
+    [[ -f "$PI_TRACKER_FILE" ]] && grep -q 'INSTALL_DATE=' "$PI_TRACKER_FILE" && \
+    grep -v 'INSTALL_DATE=""' "$PI_TRACKER_FILE" | grep -q 'INSTALL_DATE='
+}
+
+tracker_mark_installed() {
+    local key="$1"
+    local value="${2:-y}"
+    tracker_init
+    if grep -q "^${key}=" "$PI_TRACKER_FILE"; then
+        sed -i "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE"
+    else
+        echo "${key}=\"${value}\"" >> "$PI_TRACKER_FILE"
+    fi
+}
+
+tracker_is_installed() {
+    local key="$1"
+    if [[ -f "$PI_TRACKER_FILE" ]]; then
+        local val
+        val=$(grep "^${key}=" "$PI_TRACKER_FILE" 2>/dev/null | cut -d'"' -f2)
+        [[ "$val" == "y" ]]
+    else
+        return 1
+    fi
+}
+
+tracker_get_var() {
+    local key="$1"
+    local default="${2:-}"
+    if [[ -f "$PI_TRACKER_FILE" ]]; then
+        local val
+        val=$(grep "^${key}=" "$PI_TRACKER_FILE" 2>/dev/null | cut -d'"' -f2)
+        echo "${val:-$default}"
+    else
+        echo "$default"
+    fi
+}
+
+tracker_set_var() {
+    local key="$1"
+    local value="$2"
+    tracker_init
+    if grep -q "^${key}=" "$PI_TRACKER_FILE"; then
+        sed -i "s|^${key}=.*|${key}=\"${value}\"|" "$PI_TRACKER_FILE"
+    else
+        echo "${key}=\"${value}\"" >> "$PI_TRACKER_FILE"
+    fi
+}
+
+tracker_save_installation() {
+    tracker_set_var "INSTALL_DATE" "$(date -Iseconds)"
+    tracker_set_var "DESKTOP_ENV" "${DESKTOP_ENV:-}"
+    tracker_set_var "RICE_TYPE" "${RICE_TYPE:-}"
+    tracker_set_var "GPU_TYPE" "${GPU_TYPE:-}"
+    tracker_set_var "USERNAME" "${USERNAME:-$PI_REAL_USER}"
+}
+
+tracker_show_summary() {
+    if tracker_was_run; then
+        local date_env rice gpu user
+        date_env=$(tracker_get_var "INSTALL_DATE" "desconocida")
+        rice=$(tracker_get_var "RICE_TYPE" "ninguno")
+        gpu=$(tracker_get_var "GPU_TYPE" "auto")
+        user=$(tracker_get_var "USERNAME" "desconocido")
+        echo ""
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}Instalación previa detectada${NC}"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo "  Fecha:    $date_env"
+        echo "  Usuario:  $user"
+        echo "  DE:       $(tracker_get_var "DESKTOP_ENV" "-")"
+        echo "  Rice:     $rice"
+        echo "  GPU:      $gpu"
+        echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        return 0
+    fi
+    return 1
+}

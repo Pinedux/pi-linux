@@ -7,6 +7,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_LINUX="${SCRIPT_DIR}/pi-linux.sh"
 
+# Cargar librería común si existe (para tracker en modo re-run)
+if [[ -f "${SCRIPT_DIR}/lib/pi-linux-common.sh" ]]; then
+    source "${SCRIPT_DIR}/lib/pi-linux-common.sh"
+fi
+
 # Detectar si tenemos whiptail o dialog
 if command -v whiptail &>/dev/null; then
     TUI="whiptail"
@@ -265,6 +270,154 @@ Esto puede tardar varios minutos..." $((H + 4)) $W 0 || true
 }
 
 # ============================================
+# MODO RE-RUN (Software Adicional)
+# ============================================
+
+step_welcome_rerun() {
+    local date_prev user_prev de_prev
+    date_prev=$(tracker_get_var "INSTALL_DATE" "desconocida")
+    user_prev=$(tracker_get_var "USERNAME" "desconocido")
+    de_prev=$(tracker_get_var "DESKTOP_ENV" "-")
+    
+    tui_msg "Instalación Detectada" "
+🥧  Pi-Linux Installer v2.0
+
+Se detectó una instalación previa:
+  Fecha:    $date_prev
+  Usuario:  $user_prev
+  DE:       $de_prev
+
+Puedes instalar software adicional
+que no se incluyó en la instalación
+original, o ejecutar todo de nuevo."
+}
+
+step_rerun_menu() {
+    local choice
+    choice=$(tui_menu "¿Qué deseas hacer?" "Elige una opción:" \
+        "addon"     "Instalar software adicional (faltante)" \
+        "full"      "Ejecutar instalación completa de nuevo" \
+        "summary"   "Ver resumen de instalación previa")
+    echo "$choice"
+}
+
+step_addon() {
+    # Lista de software con sus tags para whiptail
+    # tag descripción variable
+    local -a items=(
+        "chrome"      "Google Chrome"             "INSTALL_CHROME"
+        "brave"       "Brave Browser"             "INSTALL_BRAVE"
+        "firefox"     "Firefox"                   "INSTALL_FIREFOX"
+        "vscode"      "Visual Studio Code"        "INSTALL_VSCODE"
+        "obsidian"    "Obsidian"                  "INSTALL_OBSIDIAN"
+        "vlc"         "VLC"                       "INSTALL_VLC"
+        "spotify"     "Spotify"                   "INSTALL_SPOTIFY"
+        "obs"         "OBS Studio"                "INSTALL_OBS"
+        "kitty"       "kitty terminal"            "INSTALL_KITTY"
+        "alacritty"   "Alacritty terminal"        "INSTALL_ALACRITTY"
+        "docker"      "Docker"                    "INSTALL_DOCKER"
+        "nodejs"      "Node.js + npm + nvm"       "INSTALL_NODEJS"
+        "python"      "Python completo"           "INSTALL_PYTHON"
+        "fzf"         "fzf fuzzy finder"          "INSTALL_FZF"
+        "ripgrep"     "ripgrep"                   "INSTALL_RIPGREP"
+        "fd"          "fd find"                   "INSTALL_FD"
+        "bat"         "bat (cat mejorado)"        "INSTALL_BAT"
+        "eza"         "eza (ls mejorado)"         "INSTALL_EZA"
+        "zoxide"      "zoxide (cd mejorado)"      "INSTALL_ZOXIDE"
+        "atuin"       "Atuin (hist. shell)"       "INSTALL_ATUIN"
+        "delta"       "git-delta"                 "INSTALL_DELTA"
+        "neovim"      "Neovim"                    "INSTALL_NEOVIM"
+        "lazyvim"     "LazyVim (config Neovim)"   "INSTALL_LAZYVIM"
+        "doomemacs"   "Doom Emacs"                "INSTALL_DOOMEMACS"
+        "btop"        "btop monitor"              "INSTALL_BTOP"
+        "nvtop"       "nvtop (GPU monitor)"       "INSTALL_NVTOP"
+        "zsh"         "Zsh"                       "INSTALL_ZSH"
+        "ohmyzsh"     "Oh-My-Zsh"                 "INSTALL_OHMYZSH"
+        "fish"        "Fish shell"                "INSTALL_FISH"
+        "starship"    "Starship prompt"           "INSTALL_STARSHIP"
+        "tmux"        "tmux"                      "INSTALL_TMUX"
+        "ohmytmux"    "Oh-My-Tmux"                "INSTALL_OHMYTMUX"
+    )
+    
+    # Construir argumentos para whiptail solo con lo no instalado
+    local whiptail_args=()
+    local total_items=0
+    local i=0
+    while [[ $i -lt ${#items[@]} ]]; do
+        local tag="${items[$i]}"
+        local desc="${items[$((i+1))]}"
+        local var="${items[$((i+2))]}"
+        
+        if ! tracker_is_installed "$var"; then
+            whiptail_args+=("$tag" "$desc" "OFF")
+            total_items=$((total_items + 1))
+        fi
+        i=$((i + 3))
+    done
+    
+    if [[ $total_items -eq 0 ]]; then
+        tui_msg "Todo Instalado" "
+✅ ¡Todo el software disponible ya está instalado!
+
+No hay nada adicional que instalar."
+        return 1
+    fi
+    
+    local sel
+    sel=$($TUI $ARGS --title "Software Adicional" --checklist "
+Selecciona el software que deseas instalar.
+Usa ESPACIO para marcar/desmarcar.
+Solo se muestra lo NO instalado:" $((H + 10)) $W $((LIST_H + 6)) "${whiptail_args[@]}")
+    
+    if [[ -z "$sel" ]]; then
+        return 1
+    fi
+    
+    # Resetear todas las variables a "n"
+    i=0
+    while [[ $i -lt ${#items[@]} ]]; do
+        local var="${items[$((i+2))]}"
+        eval "export $var=n"
+        i=$((i + 3))
+    done
+    
+    # Marcar seleccionados como "y"
+    # whiptail devuelve: "tag1" "tag2" ...
+    for item in $sel; do
+        # Quitar comillas
+        item=$(echo "$item" | tr -d '"')
+        i=0
+        while [[ $i -lt ${#items[@]} ]]; do
+            local tag="${items[$i]}"
+            local var="${items[$((i+2))]}"
+            if [[ "$tag" == "$item" ]]; then
+                eval "export $var=y"
+                break
+            fi
+            i=$((i + 3))
+        done
+    done
+    
+    return 0
+}
+
+run_addon_modules() {
+    # Ejecutar solo módulos de software
+    for module in "${SCRIPT_DIR}/modules/04-software.sh" "${SCRIPT_DIR}/modules/05-software.sh"; do
+        if [[ -f "$module" ]]; then
+            bash "$module" 2>&1 | \
+                $TUI $ARGS --title "Instalando software..." --gauge "
+Instalando software adicional seleccionado...
+Esto puede tardar unos minutos." $((H + 4)) $W 0 || true
+            
+            if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+                bash "$module"
+            fi
+        fi
+    done
+}
+
+# ============================================
 # FLUJO PRINCIPAL
 # ============================================
 
@@ -279,6 +432,58 @@ main() {
     if [[ ! -f /etc/arch-release ]]; then
         echo "Este instalador solo funciona en Arch Linux"
         exit 1
+    fi
+    
+    # Detectar si ya se ejecutó anteriormente
+    if tracker_was_run 2>/dev/null; then
+        step_welcome_rerun
+        
+        local rerun_mode
+        rerun_mode=$(step_rerun_menu)
+        
+        case "$rerun_mode" in
+            addon)
+                if step_addon; then
+                    run_addon_modules
+                    tracker_save_installation 2>/dev/null || true
+                    tui_msg "Completado" "
+✅ Software adicional instalado!
+
+Los paquetes seleccionados han sido
+instalados correctamente."
+                else
+                    tui_msg "Cancelado" "No se instaló ningún software adicional."
+                fi
+                exit 0
+                ;;
+            full)
+                # Continuar con flujo normal
+                ;;
+            summary)
+                local summary_date summary_user summary_de summary_rice summary_gpu
+                summary_date=$(tracker_get_var "INSTALL_DATE" "desconocida")
+                summary_user=$(tracker_get_var "USERNAME" "desconocido")
+                summary_de=$(tracker_get_var "DESKTOP_ENV" "-")
+                summary_rice=$(tracker_get_var "RICE_TYPE" "-")
+                summary_gpu=$(tracker_get_var "GPU_TYPE" "-")
+                
+                tui_msg "Resumen de Instalación" "
+📋 Instalación previa:
+
+  Fecha: $summary_date
+  Usuario: $summary_user
+  DE: $summary_de
+  Rice: $summary_rice
+  GPU: $summary_gpu
+
+Pulsa OK para volver al menú principal."
+                main "$@"
+                return
+                ;;
+            *)
+                exit 0
+                ;;
+        esac
     fi
     
     step_welcome

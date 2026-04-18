@@ -76,6 +76,144 @@ show_menu() {
     echo ""
 }
 
+show_re_run_menu() {
+    print_banner
+    tracker_show_summary
+    echo -e "${BOLD}¿Qué deseas hacer?${NC}"
+    echo ""
+    echo -e "  ${CYAN}1)${NC} Instalar software adicional (faltante)"
+    echo -e "  ${CYAN}2)${NC} Ejecutar instalación completa de nuevo"
+    echo -e "  ${CYAN}3)${NC} Ver resumen de instalación previa"
+    echo ""
+    echo -e "  ${RED}0)${NC} Salir"
+    echo ""
+}
+
+# Software disponible para instalar adicionalmente
+SOFTWARE_ITEMS=(
+    "INSTALL_CHROME"      "Google Chrome"             "n"
+    "INSTALL_BRAVE"       "Brave Browser"             "n"
+    "INSTALL_FIREFOX"     "Firefox"                   "n"
+    "INSTALL_VSCODE"      "Visual Studio Code"        "n"
+    "INSTALL_OBSIDIAN"    "Obsidian"                  "n"
+    "INSTALL_VLC"         "VLC"                       "n"
+    "INSTALL_SPOTIFY"     "Spotify"                   "n"
+    "INSTALL_OBS"         "OBS Studio"                "n"
+    "INSTALL_KITTY"       "kitty terminal"            "n"
+    "INSTALL_ALACRITTY"   "Alacritty terminal"        "n"
+    "INSTALL_DOCKER"      "Docker"                    "n"
+    "INSTALL_NODEJS"      "Node.js + npm + nvm"       "n"
+    "INSTALL_PYTHON"      "Python completo"           "n"
+    "INSTALL_FZF"         "fzf fuzzy finder"          "n"
+    "INSTALL_RIPGREP"     "ripgrep"                   "n"
+    "INSTALL_FD"          "fd find"                   "n"
+    "INSTALL_BAT"         "bat (cat mejorado)"        "n"
+    "INSTALL_EZA"         "eza (ls mejorado)"         "n"
+    "INSTALL_ZOXIDE"      "zoxide (cd mejorado)"      "n"
+    "INSTALL_ATUIN"       "Atuin (hist. shell)"       "n"
+    "INSTALL_DELTA"       "git-delta"                 "n"
+    "INSTALL_NEOVIM"      "Neovim"                    "n"
+    "INSTALL_LAZYVIM"     "LazyVim (config Neovim)"   "n"
+    "INSTALL_DOOMEMACS"   "Doom Emacs"                "n"
+    "INSTALL_BTOP"        "btop monitor"              "n"
+    "INSTALL_NVTOP"       "nvtop (GPU monitor)"       "n"
+    "INSTALL_ZSH"         "Zsh"                       "n"
+    "INSTALL_OHMYZSH"     "Oh-My-Zsh"                 "n"
+    "INSTALL_FISH"        "Fish shell"                "n"
+    "INSTALL_STARSHIP"    "Starship prompt"           "n"
+    "INSTALL_TMUX"        "tmux"                      "n"
+    "INSTALL_OHMYTMUX"    "Oh-My-Tmux"                "n"
+)
+
+select_addon_software() {
+    echo ""
+    echo -e "${BOLD}Selecciona el software adicional a instalar:${NC}"
+    echo -e "${YELLOW}Escribe los números separados por espacios (ej: 1 3 5) o 'all' para todo${NC}"
+    echo -e "${YELLOW}Deja vacío y pulsa Enter para cancelar${NC}"
+    echo ""
+    
+    local i=1
+    local idx=0
+    local available_count=0
+    while [[ $idx -lt ${#SOFTWARE_ITEMS[@]} ]]; do
+        local var="${SOFTWARE_ITEMS[$idx]}"
+        local name="${SOFTWARE_ITEMS[$((idx+1))]}"
+        local default="${SOFTWARE_ITEMS[$((idx+2))]}"
+        
+        if ! tracker_is_installed "$var"; then
+            printf "  ${CYAN}%2d)${NC} %-25s  ${GRAY}(no instalado)${NC}\n" "$i" "$name"
+            available_count=$((available_count + 1))
+        fi
+        idx=$((idx + 3))
+        i=$((i + 1))
+    done
+    
+    if [[ $available_count -eq 0 ]]; then
+        echo -e "${GREEN}¡Todo el software ya está instalado!${NC}"
+        return 1
+    fi
+    
+    echo ""
+    read -rp "Selección: " selection
+    
+    if [[ -z "$selection" ]]; then
+        return 1
+    fi
+    
+    # Resetear todas las variables de instalación a "n"
+    idx=0
+    while [[ $idx -lt ${#SOFTWARE_ITEMS[@]} ]]; do
+        local var="${SOFTWARE_ITEMS[$idx]}"
+        eval "export $var=n"
+        idx=$((idx + 3))
+    done
+    
+    if [[ "$selection" == "all" ]]; then
+        idx=0
+        while [[ $idx -lt ${#SOFTWARE_ITEMS[@]} ]]; do
+            local var="${SOFTWARE_ITEMS[$idx]}"
+            if ! tracker_is_installed "$var"; then
+                eval "export $var=y"
+            fi
+            idx=$((idx + 3))
+        done
+    else
+        for num in $selection; do
+            if [[ "$num" =~ ^[0-9]+$ ]]; then
+                local target_idx=$(( (num - 1) * 3 ))
+                if [[ $target_idx -lt ${#SOFTWARE_ITEMS[@]} ]]; then
+                    local var="${SOFTWARE_ITEMS[$target_idx]}"
+                    eval "export $var=y"
+                fi
+            fi
+        done
+    fi
+    
+    return 0
+}
+
+run_addon_modules() {
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}Instalando software adicional...${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    
+    for module in "$MODULES_DIR"/04-software.sh "$MODULES_DIR"/05-software.sh; do
+        if [[ -f "$module" ]]; then
+            local basename_module
+            basename_module=$(basename "$module")
+            echo ""
+            echo -e "${CYAN}▶ Ejecutando: $basename_module${NC}"
+            bash "$module"
+            echo -e "${GREEN}✓ Completado: $basename_module${NC}"
+        fi
+    done
+    
+    echo ""
+    echo -e "${GREEN}✓ Software adicional instalado!${NC}"
+}
+
 select_username() {
     echo ""
     echo -e "${BOLD}Configuración del Usuario:${NC}"
@@ -406,7 +544,45 @@ main() {
         read -rp "¿Iniciar instalación desatendida? [S/n]: " confirm
         [[ "$confirm" == "n" || "$confirm" == "N" ]] && exit 0
         run_modules
+        tracker_save_installation
     else
+        # Detectar si ya se ejecutó anteriormente
+        if tracker_was_run; then
+            show_re_run_menu
+            read -rp "Selecciona [0-3]: " re_choice
+            
+            case $re_choice in
+                1)
+                    info "Modo software adicional"
+                    if select_addon_software; then
+                        # Recargar librería
+                        source "${LIB_DIR}/pi-linux-common.sh"
+                        run_addon_modules
+                        tracker_save_installation
+                        echo ""
+                        echo -e "${GREEN}✓ Software adicional instalado correctamente.${NC}"
+                        exit 0
+                    else
+                        info "Cancelado. Saliendo..."
+                        exit 0
+                    fi
+                    ;;
+                2)
+                    info "Re-ejecutando instalación completa..."
+                    ;;
+                3)
+                    tracker_show_summary
+                    echo ""
+                    read -rp "Pulsa Enter para continuar..."
+                    main "$@"
+                    return
+                    ;;
+                0)
+                    exit 0
+                    ;;
+            esac
+        fi
+        
         show_menu
         read -rp "Selecciona [0-3]: " choice
         
@@ -446,6 +622,7 @@ main() {
         [[ "$confirm" == "n" || "$confirm" == "N" ]] && exit 0
         
         run_modules
+        tracker_save_installation
     fi
     
     echo ""
