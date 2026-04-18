@@ -61,8 +61,13 @@ if is_yes "${INSTALL_ZOXIDE}"; then
 fi
 
 if is_yes "${INSTALL_ATUIN}"; then
-    sudo -u "$PI_REAL_USER" bash -c "curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh" 2>/dev/null || true
-    tracker_mark_installed "INSTALL_ATUIN" "y"
+    info "Instalando Atuin..."
+    if sudo -u "$PI_REAL_USER" bash -c "curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh" 2>/dev/null; then
+        tracker_mark_installed "INSTALL_ATUIN" "y"
+        success "Atuin instalado"
+    else
+        warning "No se pudo instalar Atuin"
+    fi
 fi
 
 if is_yes "${INSTALL_DELTA}"; then

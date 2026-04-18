@@ -23,18 +23,24 @@ fi
 if is_yes "${INSTALL_CHROME}"; then
     info "Instalando Google Chrome..."
     cd /tmp
-    wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm -O chrome.rpm 2>/dev/null || \
-    curl -O https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.pkg.tar.zst 2>/dev/null || \
-    install_aur google-chrome 2>/dev/null || true
-    tracker_mark_installed "INSTALL_CHROME" "y"
-    success "Google Chrome instalado"
+    if wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm -O chrome.rpm 2>/dev/null || \
+       curl -O https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.pkg.tar.zst 2>/dev/null || \
+       install_aur google-chrome 2>/dev/null; then
+        tracker_mark_installed "INSTALL_CHROME" "y"
+        success "Google Chrome instalado"
+    else
+        warning "No se pudo instalar Google Chrome"
+    fi
 fi
 
 if is_yes "${INSTALL_BRAVE}"; then
     info "Instalando Brave..."
-    install_pkg brave-browser 2>/dev/null || install_aur brave-bin 2>/dev/null || true
-    tracker_mark_installed "INSTALL_BRAVE" "y"
-    success "Brave instalado"
+    if install_pkg brave-browser 2>/dev/null || install_aur brave-bin 2>/dev/null; then
+        tracker_mark_installed "INSTALL_BRAVE" "y"
+        success "Brave instalado"
+    else
+        warning "No se pudo instalar Brave"
+    fi
 fi
 
 # ============================================
