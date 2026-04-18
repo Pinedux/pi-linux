@@ -10,11 +10,9 @@ bolt
 brltty
 broadcom-wl
 btrfs-progs
-clonezilla
 cloud-init
 cryptsetup
 darkhttpd
-ddrescue
 dhcpcd
 diffutils
 dmidecode
@@ -30,8 +28,6 @@ exfatprogs
 f2fs-tools
 fatresize
 foot-terminfo
-fsarchiver
-gpart
 gpm
 gptfdisk
 grml-zsh-config
@@ -39,7 +35,6 @@ grub
 hdparm
 hyperv
 intel-ucode
-irssi
 iw
 iwd
 jfsutils
@@ -56,10 +51,8 @@ linux-firmware-marvell
 livecd-sounds
 lsscsi
 lvm2
-lynx
 man-db
 man-pages
-mc
 mdadm
 memtest86+
 memtest86+-efi
@@ -85,7 +78,6 @@ openssh
 openvpn
 partclone
 parted
-partimage
 pcsclite
 ppp
 pptpclient
@@ -107,7 +99,6 @@ syslinux
 systemd-resolvconf
 tcpdump
 terminus-font
-testdisk
 tmux
 tpm2-tools
 tpm2-tss

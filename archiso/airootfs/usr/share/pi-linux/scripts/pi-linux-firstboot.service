@@ -2,20 +2,17 @@
 Description=Pi-Linux First Boot Installer
 After=network-online.target
 Wants=network-online.target
+ConditionPathExists=!/var/lib/pi-linux-installed
 
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/pi-linux-firstboot
+RemainAfterExit=yes
 StandardInput=tty
 StandardOutput=tty
 TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
-# Si falla, reintentar una vez tras 10 segundos
-Restart=on-failure
-RestartSec=10
-# Timeout generoso para descargas e instalación
-TimeoutStartSec=3600
 
 [Install]
 WantedBy=multi-user.target

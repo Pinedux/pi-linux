@@ -4,9 +4,9 @@
 
 set -e
 
-REPO_URL="https://github.com/Pinedux/pi-linux.git"
-INSTALL_DIR="/root/pi-linux"
+INSTALL_DIR="/usr/share/pi-linux"
 TUI_SCRIPT="${INSTALL_DIR}/scripts/tui.sh"
+REPO_URL="https://github.com/Pinedux/pi-linux.git"
 
 # Banner
 clear
@@ -38,19 +38,24 @@ fi
 echo "[✓] Conexión OK"
 echo ""
 
-# Clonar repo
-echo "[*] Descargando Pi-Linux desde GitHub..."
-if [[ -d "$INSTALL_DIR" ]]; then
-    rm -rf "$INSTALL_DIR"
-fi
-
-if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
-    echo "[✓] Repo clonado"
+echo "[*] Cargando Pi-Linux..."
+if [[ -d "$INSTALL_DIR" && -f "$TUI_SCRIPT" ]]; then
+    echo "[✓] Scripts locales encontrados (offline)"
 else
-    echo "⚠  Falló la descarga."
-    read -rp "Pulsa ENTER para shell..."
-    bash
-    exit 1
+    echo "[*] Descargando Pi-Linux desde GitHub..."
+    INSTALL_DIR="/root/pi-linux"
+    TUI_SCRIPT="${INSTALL_DIR}/scripts/tui.sh"
+    if [[ -d "$INSTALL_DIR" ]]; then
+        rm -rf "$INSTALL_DIR"
+    fi
+    if git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
+        echo "[✓] Repo clonado"
+    else
+        echo "⚠  Falló la descarga."
+        read -rp "Pulsa ENTER para shell..."
+        bash
+        exit 1
+    fi
 fi
 
 echo ""

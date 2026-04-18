@@ -159,12 +159,12 @@ fi
 if is_yes "${INSTALL_ZSH}"; then
     info "Instalando Zsh..."
     install_pkg zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions
-    if [[ "${PI_SKIP_CHSH:-n}" != "y" ]]; then
-        info "Cambiando shell por defecto a Zsh..."
-        chsh -s /bin/zsh "$PI_REAL_USER" 2>/dev/null || true
-    else
-        info "Saltando cambio de shell (PI_SKIP_CHSH=y)"
-    fi
+if [[ "${PI_SKIP_CHSH:-n}" != "y" ]]; then
+    info "Cambiando shell por defecto a Zsh..."
+    chsh -s /bin/zsh "$PI_REAL_USER" 2>/dev/null || true
+else
+    info "Saltando cambio de shell (PI_SKIP_CHSH=y)"
+fi
     tracker_mark_installed "INSTALL_ZSH" "y"
     success "Zsh instalado"
 fi

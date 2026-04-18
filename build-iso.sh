@@ -5,6 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "2.0.0")"
 PROFILE_DIR="${SCRIPT_DIR}/archiso"
 OUTPUT_DIR="${SCRIPT_DIR}/iso-output"
 WORK_DIR="/tmp/archiso-tmp"
@@ -71,7 +72,10 @@ build_iso() {
     
     mkdir -p "$OUTPUT_DIR"
     
-    echo "[*] Compilando ISO (esto puede tardar 15-30 min)..."
+    echo "[*] Inyectando versión ${VERSION} en profiledef.sh..."
+    sed -i "s/^iso_version=.*/iso_version=\"${VERSION}\"/" "${PROFILE_DIR}/profiledef.sh"
+    
+    echo "[*] Compilando ISO Pi-Linux v${VERSION} (esto puede tardar 15-30 min)..."
     echo ""
     
     mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
@@ -83,9 +87,9 @@ build_iso() {
     echo ""
     
     local iso_file
-    iso_file=$(ls -1t "$OUTPUT_DIR"/*.iso 2>/dev/null | head -n 1)
+    iso_file="${OUTPUT_DIR}/pi-linux-${VERSION}-x86_64.iso"
     
-    if [[ -n "$iso_file" ]]; then
+    if [[ -f "$iso_file" ]]; then
         echo "📀 ISO: $iso_file"
         echo "📏 Tamaño: $(du -h "$iso_file" | cut -f1)"
         echo ""
@@ -98,7 +102,7 @@ build_iso() {
         echo "💿 Para grabar en USB:"
         echo "      sudo dd if='$iso_file' of=/dev/sdX bs=4M status=progress"
     else
-        echo "⚠  No se encontró el archivo ISO en $OUTPUT_DIR"
+        echo "⚠  No se encontró el archivo ISO esperado: $iso_file"
     fi
     echo ""
 }
