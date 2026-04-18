@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_URL="https://github.com/pinedux/pi-linux.git"
+REPO_URL="https://github.com/Pinedux/pi-linux.git"
 INSTALL_DIR="/root/pi-linux"
 TUI_SCRIPT="${INSTALL_DIR}/scripts/tui.sh"
 

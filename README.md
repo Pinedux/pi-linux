@@ -237,16 +237,16 @@ MIT License — Libre para usar y modificar
 Una vez subido a GitHub, podrás instalar Pi-Linux directamente con:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/pi-linux.sh)
+bash <(curl -sL https://raw.githubusercontent.com/Pinedux/pi-linux/main/pi-linux.sh)
 ```
 
 O el modo TUI:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/TU_USUARIO/pi-linux/main/scripts/tui.sh)
+bash <(curl -sL https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/tui.sh)
 ```
 
-> **Nota:** Reemplaza `TU_USUARIO` con tu usuario de GitHub antes de usar.
+> **Nota:** Reemplaza `Pinedux` con tu usuario de GitHub antes de usar.
 
 ---
 
@@ -305,7 +305,7 @@ Si aún no has configurado el remote:
 # 1. Crear repo en GitHub (vacío, sin README)
 # 2. En tu terminal:
 cd ~/www/pi_linux
-git remote add origin https://github.com/TU_USUARIO/pi-linux.git
+git remote add origin https://github.com/Pinedux/pi-linux.git
 git branch -M main
 git push -u origin main
 ```
