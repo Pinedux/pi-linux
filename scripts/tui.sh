@@ -87,6 +87,40 @@ Incluye:
 Pulsa OK para continuar."
 }
 
+step_username() {
+    local user_input
+    user_input=$($TUI $ARGS --title "Usuario del Sistema" --inputbox "
+Introduce el nombre de usuario para el sistema.
+Este usuario recibirá los dotfiles y configuraciones.
+
+Si el usuario no existe, se creará automáticamente." $((H + 4)) $W "${SUDO_USER:-pinedux}")
+    
+    if [[ -z "$user_input" ]]; then
+        user_input="${SUDO_USER:-pinedux}"
+    fi
+    
+    USERNAME="$user_input"
+    export USERNAME
+    
+    # Verificar si existe
+    if ! id "$USERNAME" &>/dev/null; then
+        if tui_yesno "Crear Usuario" "El usuario '$USERNAME' no existe en el sistema.
+
+¿Deseas crearlo ahora?"; then
+            useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null || \
+            useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"
+            
+            $TUI $ARGS --title "Contraseña" --passwordbox "
+Establece una contraseña para $USERNAME:" $H $W 2>/dev/null || true
+            
+            # Asegurar sudo para wheel
+            if [[ -f /etc/sudoers ]] && ! grep -q "^%wheel" /etc/sudoers; then
+                echo "%wheel ALL=(ALL:ALL) ALL" >> /etc/sudoers
+            fi
+        fi
+    fi
+}
+
 step_mode() {
     local mode
     mode=$(tui_menu "Modo de Instalación" "Elige cómo quieres instalar:" \
@@ -185,14 +219,16 @@ step_confirm() {
     local de="$1"
     local rice="$2"
     local gpu="$3"
+    local user="${USERNAME:-${SUDO_USER:-user}}"
     
     if tui_yesno "Confirmación" "
 Resumen de la instalación:
 
-  DE:     $de
-  Rice:   $rice
-  GPU:    $gpu
-  SDDM:   sddm-astronaut-theme
+  Usuario: $user
+  DE:      $de
+  Rice:    $rice
+  GPU:     $gpu
+  SDDM:    sddm-astronaut-theme
 
 ¿Iniciar instalación?"; then
         return 0
@@ -307,6 +343,9 @@ main() {
             ;;
     esac
     
+    # Preguntar usuario del sistema antes de confirmar
+    step_username
+    
     if step_confirm "$de" "$rice" "$gpu"; then
         # Guardar selección en unattended.conf temporal
         cat > "${SCRIPT_DIR}/config/unattended.conf" <<EOF
@@ -352,7 +391,7 @@ INSTALL_FISH="n"
 INSTALL_STARSHIP="y"
 INSTALL_TMUX="y"
 INSTALL_OHMYTMUX="n"
-USERNAME="${SUDO_USER:-user}"
+USERNAME="${USERNAME:-${SUDO_USER:-user}}"
 HOSTNAME="pi-linux"
 TIMEZONE="Europe/Madrid"
 LOCALE="es_ES.UTF-8"

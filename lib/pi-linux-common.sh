@@ -35,8 +35,19 @@ banner() {
 # ============================================
 
 # Detectar usuario real (aunque se ejecute con sudo)
-PI_REAL_USER="${SUDO_USER:-$USER}"
-PI_USER_HOME="$(eval echo ~"$PI_REAL_USER")"
+# Permite override via USERNAME variable para instaladores desatendidos
+if [[ -n "${USERNAME:-}" ]]; then
+    PI_REAL_USER="$USERNAME"
+else
+    PI_REAL_USER="${SUDO_USER:-$USER}"
+fi
+
+# Si el usuario no existe en el sistema, fallback al que ejecuta sudo
+if ! id "$PI_REAL_USER" &>/dev/null; then
+    PI_REAL_USER="${SUDO_USER:-$USER}"
+fi
+
+PI_USER_HOME="$(eval echo ~"$PI_REAL_USER" 2>/dev/null || echo "/home/$PI_REAL_USER")"
 PI_CONFIG_DIR="${PI_USER_HOME}/.config"
 
 # ============================================

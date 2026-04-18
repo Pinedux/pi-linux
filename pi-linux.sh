@@ -76,6 +76,50 @@ show_menu() {
     echo ""
 }
 
+select_username() {
+    echo ""
+    echo -e "${BOLD}Configuración del Usuario:${NC}"
+    echo ""
+    
+    # Sugerir el usuario actual (quien ejecutó sudo) o el de config
+    local suggested="${USERNAME:-${SUDO_USER:-user}}"
+    read -rp "Nombre de usuario [$suggested]: " input_user
+    
+    if [[ -n "$input_user" ]]; then
+        USERNAME="$input_user"
+    else
+        USERNAME="$suggested"
+    fi
+    
+    export USERNAME
+    
+    # Verificar que el usuario existe en el sistema
+    if ! id "$USERNAME" &>/dev/null; then
+        warning "El usuario '$USERNAME' no existe en el sistema."
+        read -rp "¿Crear usuario '$USERNAME' ahora? [S/n]: " create_user
+        if [[ "$create_user" != "n" && "$create_user" != "N" ]]; then
+            info "Creando usuario '$USERNAME'..."
+            useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null || \
+            useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"
+            
+            echo ""
+            echo -e "${YELLOW}⚠  Establece una contraseña para $USERNAME:${NC}"
+            passwd "$USERNAME"
+            
+            # Asegurar que wheel tenga sudo
+            if [[ -f /etc/sudoers ]] && ! grep -q "^%wheel" /etc/sudoers; then
+                echo "%wheel ALL=(ALL:ALL) ALL" >> /etc/sudoers
+            fi
+            
+            success "Usuario '$USERNAME' creado"
+        else
+            warning "Continuando sin crear usuario. Algunos módulos pueden fallar."
+        fi
+    else
+        success "Usuario: $USERNAME"
+    fi
+}
+
 select_desktop_environment() {
     echo ""
     echo -e "${BOLD}Selecciona el Entorno de Escritorio:${NC}"
@@ -281,10 +325,11 @@ show_summary() {
     echo ""
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BOLD}Resumen de Instalación:${NC}"
-    echo "  DE:     $DESKTOP_ENV"
-    echo "  Rice:   ${RICE_TYPE:-none}"
-    echo "  GPU:    $GPU_TYPE"
-    echo "  SDDM:   sddm-astronaut-theme (unificado)"
+    echo "  Usuario: ${PI_REAL_USER:-$USERNAME}"
+    echo "  DE:      $DESKTOP_ENV"
+    echo "  Rice:    ${RICE_TYPE:-none}"
+    echo "  GPU:     $GPU_TYPE"
+    echo "  SDDM:    sddm-astronaut-theme (unificado)"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
@@ -344,6 +389,19 @@ main() {
     if [[ "${1:-}" == "--unattended" ]]; then
         info "Modo desatendido activado"
         load_unattended_config
+        
+        # Asegurar que el usuario del config existe
+        if [[ -n "${USERNAME:-}" ]] && ! id "$USERNAME" &>/dev/null; then
+            warning "El usuario '$USERNAME' no existe. Creándolo..."
+            useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null || \
+            useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"
+            echo "Establece contraseña para $USERNAME:"
+            passwd "$USERNAME"
+        fi
+        
+        # Recargar librería con el usuario del config
+        source "${LIB_DIR}/pi-linux-common.sh"
+        
         show_summary
         read -rp "¿Iniciar instalación desatendida? [S/n]: " confirm
         [[ "$confirm" == "n" || "$confirm" == "N" ]] && exit 0
@@ -362,6 +420,7 @@ main() {
                 export DESKTOP_ENV RICE_TYPE THEME GPU_TYPE
                 ;;
             2)
+                select_username
                 select_desktop_environment
                 select_rice
                 select_gpu
@@ -373,6 +432,14 @@ main() {
                 exit 0
                 ;;
         esac
+        
+        # En modo automático/express, preguntar usuario si no está definido
+        if [[ -z "${USERNAME:-}" ]]; then
+            select_username
+        fi
+        
+        # Recargar librería con el usuario actualizado
+        source "${LIB_DIR}/pi-linux-common.sh"
         
         show_summary
         read -rp "¿Iniciar instalación? [S/n]: " confirm
