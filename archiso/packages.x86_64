@@ -53,7 +53,7 @@ memtest86+
 memtest86+-efi
 mkinitcpio
 mkinitcpio-archiso
-mkinitcpio-mmc-utils
+mmc-utils
 modemmanager
 mtools
 nano
