@@ -310,8 +310,11 @@ tracker_is_installed() {
     local key="$1"
     if [[ -f "$PI_TRACKER_FILE" ]]; then
         local val
-        val=$(grep "^${key}=" "$PI_TRACKER_FILE" 2>/dev/null | cut -d'"' -f2)
-        [[ "$val" == "y" ]]
+        (
+            flock -s 200
+            val=$(grep "^${key}=" "$PI_TRACKER_FILE" 2>/dev/null | cut -d'"' -f2)
+            [[ "$val" == "y" ]]
+        ) 200<"$PI_TRACKER_FILE"
     else
         return 1
     fi

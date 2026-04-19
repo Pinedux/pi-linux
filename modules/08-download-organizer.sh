@@ -66,8 +66,11 @@ if [[ -f "${LOCAL_SCRIPTS_DIR}/download-organizer.sh" ]]; then
     cp -v "${LOCAL_SCRIPTS_DIR}/download-organizer.sh" "$USER_HOME/.local/bin/pi-linux-download-organizer"
 else
     echo "[!] Script del organizador no encontrado en medios locales. Descargando..."
-    curl -sL -o "$USER_HOME/.local/bin/pi-linux-download-organizer" \
-        "https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/download-organizer.sh"
+    curl -fsSL -o "$USER_HOME/.local/bin/pi-linux-download-organizer" \
+        "https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/download-organizer.sh" || {
+        error "No se pudo descargar el script del organizador"
+        return 1
+    }
 fi
 
 chmod +x "$USER_HOME/.local/bin/pi-linux-download-organizer"
@@ -93,9 +96,10 @@ WantedBy=default.target
 EOF
 fi
 
-# Fix ownership for all user files
-chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.local"
-chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.config"
+# Fix ownership only for files/directories we created (avoid excessive chown)
+chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.local/share/pi-linux"
+chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.local/bin/pi-linux-download-organizer"
+chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/.config/systemd/user/download-organizer.service"
 chown -R "$USER_NAME:$USER_NAME" "$USER_HOME/Descargas"
 
 # Enable and start service as user

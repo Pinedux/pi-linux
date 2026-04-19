@@ -9,6 +9,8 @@ VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "2.0.0")"
 PROFILE_DIR="${SCRIPT_DIR}/archiso"
 OUTPUT_DIR="${SCRIPT_DIR}/iso-output"
 WORK_DIR="/tmp/archiso-tmp"
+PACMAN_CACHE="${SCRIPT_DIR}/.pacman-cache"
+FAST_BUILD=false
 
 # ============================================
 # VERIFICAR DEPENDENCIAS
@@ -61,12 +63,15 @@ sync_airootfs() {
     local dst_dir="${PROFILE_DIR}/airootfs/usr/share/pi-linux"
 
     echo "[*] Sincronizando scripts a airootfs..."
+    mkdir -p "$PACMAN_CACHE"
+    mkdir -p "${dst_dir}"
     mkdir -p "${dst_dir}"/modules
     mkdir -p "${dst_dir}"/lib
     mkdir -p "${dst_dir}"/config
     mkdir -p "${dst_dir}"/scripts
     mkdir -p "${dst_dir}"/extras
 
+    cp -v "${src_dir}/VERSION" "${dst_dir}/VERSION"
     cp -v "${src_dir}/pi-linux.sh" "${dst_dir}/pi-linux.sh"
     cp -v "${src_dir}/lib/pi-linux-common.sh" "${dst_dir}/lib/"
     cp -v "${src_dir}/config/unattended.conf" "${dst_dir}/config/"
@@ -96,13 +101,13 @@ build_iso() {
     echo "[*] Salida:   $OUTPUT_DIR"
     echo ""
     
-    # Limpiar trabajo anterior
-    if [[ -d "$WORK_DIR" ]]; then
+    mkdir -p "$OUTPUT_DIR"
+    
+    # Limpiar trabajo anterior (salvo en modo fast)
+    if [[ "$FAST_BUILD" != true ]] && [[ -d "$WORK_DIR" ]]; then
         echo "[*] Limpiando directorio de trabajo..."
         rm -rf "$WORK_DIR"
     fi
-    
-    mkdir -p "$OUTPUT_DIR"
     
     echo "[*] Inyectando versión ${VERSION} en profiledef.sh..."
     sed -i "s/^iso_version=.*/iso_version=\"${VERSION}\"/" "${PROFILE_DIR}/profiledef.sh"
@@ -112,7 +117,15 @@ build_iso() {
     
     sync_airootfs
     
-    mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+    # Ensure persistent pacman cache directory exists inside chroot path expectations
+    mkdir -p "$PACMAN_CACHE"
+    
+    if [[ "$FAST_BUILD" == true ]]; then
+        echo "[*] Modo FAST: reutilizando work dir y sin -r"
+        mkarchiso -v -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+    else
+        mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+    fi
     
     echo ""
     echo "========================================"
@@ -191,6 +204,10 @@ case "${1:-}" in
     build)
         build_iso
         ;;
+    build-fast)
+        FAST_BUILD=true
+        build_iso
+        ;;
     test)
         test_iso
         ;;
@@ -200,9 +217,10 @@ case "${1:-}" in
     *)
         print_banner
         echo "Uso:"
-        echo "  sudo ./build-iso.sh build    # Compilar la ISO"
-        echo "  sudo ./build-iso.sh test     # Probar la última ISO en QEMU"
-        echo "  sudo ./build-iso.sh clean    # Limpiar archivos temporales"
+        echo "  sudo ./build-iso.sh build      # Compilar la ISO"
+        echo "  sudo ./build-iso.sh build-fast # Compilar rápido (reutiliza work dir)"
+        echo "  sudo ./build-iso.sh test       # Probar la última ISO en QEMU"
+        echo "  sudo ./build-iso.sh clean      # Limpiar archivos temporales"
         echo ""
         ;;
 esac

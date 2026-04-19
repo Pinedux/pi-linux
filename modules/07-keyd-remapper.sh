@@ -42,8 +42,11 @@ if [[ -f "$local_appimage" ]]; then
     cp -v "$local_appimage" "${INSTALL_DIR}/${APP_IMAGE}"
 else
     echo "[*] Descargando keyd-remapper AppImage..."
-    curl -sL -o "${INSTALL_DIR}/${APP_IMAGE}" \
-        "https://github.com/Pinedux/keyd-remapper/releases/download/v1.0.1/${APP_IMAGE}"
+    curl -fsSL -o "${INSTALL_DIR}/${APP_IMAGE}" \
+        "https://github.com/Pinedux/keyd-remapper/releases/download/v1.0.1/${APP_IMAGE}" || {
+        error "No se pudo descargar keyd-remapper AppImage"
+        return 1
+    }
 fi
 
 chmod +x "${INSTALL_DIR}/${APP_IMAGE}"
@@ -56,8 +59,10 @@ if [[ -f "${LOCALExtras_DIR}/keyd-remapper.png" ]]; then
 else
     # Fallback: download icon
     echo "[*] Descargando icono..."
-    curl -sL -o /usr/share/pixmaps/keyd-remapper.png \
-        "https://raw.githubusercontent.com/Pinedux/keyd-remapper/main/src-tauri/icons/icon.png"
+    curl -fsSL -o /usr/share/pixmaps/keyd-remapper.png \
+        "https://raw.githubusercontent.com/Pinedux/keyd-remapper/main/src-tauri/icons/icon.png" || {
+        warning "No se pudo descargar icono, continuando sin él..."
+    }
 fi
 
 # Install desktop entry

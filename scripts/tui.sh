@@ -407,7 +407,7 @@ Solo se muestra lo NO instalado:" $((H + 10)) $W $((LIST_H + 6)) "${whiptail_arg
     i=0
     while [[ $i -lt ${#items[@]} ]]; do
         local var="${items[$((i+2))]}"
-        eval "export $var=n"
+        declare -gx "$var=n"
         i=$((i + 3))
     done
     
@@ -421,7 +421,7 @@ Solo se muestra lo NO instalado:" $((H + 10)) $W $((LIST_H + 6)) "${whiptail_arg
             local tag="${items[$i]}"
             local var="${items[$((i+2))]}"
             if [[ "$tag" == "$item" ]]; then
-                eval "export $var=y"
+                declare -gx "$var=y"
                 break
             fi
             i=$((i + 3))

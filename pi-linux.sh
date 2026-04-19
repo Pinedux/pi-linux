@@ -7,6 +7,21 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODULES_DIR="$SCRIPT_DIR/modules"
+
+# Explicit module execution order (avoids glob ASCII sort bug: 07 before 01)
+MODULE_ORDER=(
+    "00-preinstall.sh"
+    "01-base.sh"
+    "02-gpu.sh"
+    "02-sddm.sh"
+    "03-desktop.sh"
+    "04-software.sh"
+    "04-themes.sh"
+    "05-software.sh"
+    "06-hyprland-rice.sh"
+    "07-keyd-remapper.sh"
+    "08-download-organizer.sh"
+)
 LIB_DIR="$SCRIPT_DIR/lib"
 VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "2.0.0")"
 
@@ -232,6 +247,12 @@ select_username() {
         USERNAME="$suggested"
     fi
     
+    # Validate username (POSIX compliant: a-z, 0-9, _, -, cannot start with - or digit)
+    if ! [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+        error "Nombre de usuario inválido: '$USERNAME'. Solo minúsculas, números, guiones y guiones bajos. Debe empezar con letra o guión bajo."
+        return 1
+    fi
+    
     export USERNAME
     
     # Verificar que el usuario existe en el sistema
@@ -430,15 +451,31 @@ load_unattended_config() {
     local conf="$SCRIPT_DIR/config/unattended.conf"
     if [[ -f "$conf" ]]; then
         info "Cargando configuración desatendida..."
-        source "$conf"
+        
+        # Parsear de forma segura (evita source arbitrario)
+        local var val
+        while IFS='=' read -r var val; do
+            # Saltar líneas vacías o comentarios
+            [[ -z "$var" || "$var" =~ ^[[:space:]]*# ]] && continue
+            # Solo permitir variables con nombres seguros
+            [[ "$var" =~ ^[A-Z_][A-Z0-9_]*$ ]] || continue
+            # Quitar comillas del valor
+            val="${val#\"}"; val="${val%\"}"
+            val="${val#\'}"; val="${val%\'}"
+            case "$var" in
+                DESKTOP_ENV|THEME|RICE_TYPE|HYPR_RICE|GNOME_RICE|PLASMA_RICE|GPU_TYPE|SDDM_THEME|USERNAME|HOSTNAME|TIMEZONE|LOCALE|KEYMAP|INSTALL_*)
+                    declare -g "$var=$val"
+                    ;;
+            esac
+        done < <(grep -E '^[A-Z_][A-Z0-9_]*=' "$conf")
         
         # Mapear variables de rice del conf a las del instalador
-        case "${DESKTOP_ENV}" in
+        case "${DESKTOP_ENV:-plasma}" in
             plasma)
-                RICE_TYPE="${PLASMA_RICE:-$THEME}"
+                RICE_TYPE="${PLASMA_RICE:-${THEME:-sweet}}"
                 ;;
             gnome)
-                RICE_TYPE="${GNOME_RICE:-$THEME}"
+                RICE_TYPE="${GNOME_RICE:-${THEME:-sweet}}"
                 ;;
             hyprland)
                 HYPR_RICE="${HYPR_RICE:-hyde}"
@@ -484,8 +521,7 @@ show_summary() {
 # ============================================
 
 run_modules() {
-    local modules=("$MODULES_DIR"/*.sh)
-    local total=${#modules[@]}
+    local total=${#MODULE_ORDER[@]}
     local current=1
     
     echo ""
@@ -494,7 +530,8 @@ run_modules() {
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     
-    for module in "${modules[@]}"; do
+    for module_name in "${MODULE_ORDER[@]}"; do
+        local module="$MODULES_DIR/$module_name"
         if [[ -f "$module" ]]; then
             local basename_module
             basename_module=$(basename "$module")
@@ -516,6 +553,8 @@ run_modules() {
                 fi
             fi
             ((current++))
+        else
+            warning "Módulo no encontrado: $module_name"
         fi
     done
 }
