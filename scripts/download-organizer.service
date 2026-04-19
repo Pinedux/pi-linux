@@ -1,0 +1,13 @@
+[Unit]
+Description=Pi-Linux Download Organizer
+Documentation=https://github.com/Pinedux/pi-linux
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/pi-linux-download-organizer
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

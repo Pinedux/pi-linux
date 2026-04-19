@@ -70,9 +70,9 @@ sync_airootfs() {
     cp -v "${src_dir}/pi-linux.sh" "${dst_dir}/pi-linux.sh"
     cp -v "${src_dir}/lib/pi-linux-common.sh" "${dst_dir}/lib/"
     cp -v "${src_dir}/config/unattended.conf" "${dst_dir}/config/"
-    cp -v "${src_dir}/scripts/tui.sh" "${dst_dir}/scripts/" 2>/dev/null || true
-    cp -v "${src_dir}/scripts/pi-linux-firstboot.sh" "${dst_dir}/scripts/" 2>/dev/null || true
-    cp -v "${src_dir}/scripts/pi-linux-firstboot.service" "${dst_dir}/scripts/" 2>/dev/null || true
+    for script in "${src_dir}"/scripts/*; do
+        cp -v "$script" "${dst_dir}/scripts/" 2>/dev/null || true
+    done
 
     for mod in "${src_dir}"/modules/*.sh; do
         cp -v "$mod" "${dst_dir}/modules/"
