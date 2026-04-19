@@ -91,6 +91,7 @@ sync_airootfs() {
 
     chmod +x "${dst_dir}/pi-linux.sh"
     chmod +x "${dst_dir}/modules/"*.sh
+    chmod +x "${dst_dir}/scripts/"*.sh
 }
 
 build_iso() {

@@ -1,0 +1,3 @@
+#!/bin/bash
+# Wrapper para el firstboot installer
+exec bash /usr/share/pi-linux/scripts/pi-linux-firstboot.sh "$@"
