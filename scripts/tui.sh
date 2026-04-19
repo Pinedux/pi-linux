@@ -8,6 +8,10 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_LINUX="${SCRIPT_DIR}/pi-linux.sh"
 
+# Reset terminal state to prevent ANSI garbage from previous programs
+# (e.g. iwctl, nmtui) from leaking into whiptail dialogs
+tput reset 2>/dev/null || true
+
 # Cargar librería común si existe (para tracker en modo re-run)
 if [[ -f "${SCRIPT_DIR}/lib/pi-linux-common.sh" ]]; then
     source "${SCRIPT_DIR}/lib/pi-linux-common.sh"
@@ -275,7 +279,9 @@ step_running() {
     > "$logfile"
     
     (
-        bash "$PI_LINUX" --unattended >> "$logfile" 2>&1
+        # --yes prevents pi-linux.sh from hanging on interactive reads
+        # when stdin is not a tty (which happens inside this subshell)
+        bash "$PI_LINUX" --unattended --yes >> "$logfile" 2>&1
     ) &
     local pid=$!
     

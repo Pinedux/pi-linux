@@ -581,6 +581,8 @@ main() {
     # Verificar si hay argumento --unattended
     if [[ "${1:-}" == "--unattended" ]]; then
         info "Modo desatendido activado"
+        # In unattended mode, never prompt interactively
+        FORCE_YES=true
         load_unattended_config
         
         # Asegurar que el usuario del config existe
