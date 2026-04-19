@@ -27,6 +27,23 @@ Transforma una instalación base de Arch (solo CLI) en un sistema de escritorio 
 
 ---
 
+## ⬇️ Descargas
+
+La última ISO live está disponible en **[GitHub Releases](https://github.com/Pinedux/pi-linux/releases/latest)**.
+
+| Versión | Descarga | SHA256 |
+|---------|----------|--------|
+| Latest | [`pi-linux-latest-x86_64.iso`](https://github.com/Pinedux/pi-linux/releases/latest) | Ver release |
+
+### Flashear a USB
+```bash
+# Descarga la ISO desde el release más reciente
+# Luego flashea (reemplaza /dev/sdX por tu dispositivo):
+sudo dd if=pi-linux-*.iso of=/dev/sdX bs=4M status=progress
+```
+
+---
+
 ## 🚀 Uso Rápido
 
 ```bash

@@ -208,6 +208,10 @@ case "${1:-}" in
         FAST_BUILD=true
         build_iso
         ;;
+    release)
+        build_iso
+        bash "${SCRIPT_DIR}/scripts/release-iso.sh"
+        ;;
     test)
         test_iso
         ;;
@@ -219,6 +223,7 @@ case "${1:-}" in
         echo "Uso:"
         echo "  sudo ./build-iso.sh build      # Compilar la ISO"
         echo "  sudo ./build-iso.sh build-fast # Compilar rápido (reutiliza work dir)"
+        echo "  sudo ./build-iso.sh release    # Compilar y publicar en GitHub Releases"
         echo "  sudo ./build-iso.sh test       # Probar la última ISO en QEMU"
         echo "  sudo ./build-iso.sh clean      # Limpiar archivos temporales"
         echo ""
