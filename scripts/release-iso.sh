@@ -149,12 +149,16 @@ publish_release() {
         gh release upload "$tag" "${ISO_PATH}.sha256" --repo "$REPO_SLUG" --clobber
     else
         echo "📦 Creando release ${tag}..."
+        local notes_file
+        notes_file="/tmp/pi-linux-release-notes-$$.md"
+        generate_notes > "$notes_file"
         gh release create "$tag" \
             --repo "$REPO_SLUG" \
             --title "Pi-Linux ${VERSION}" \
-            --notes "$(generate_notes)" \
+            --notes-file "$notes_file" \
             "$ISO_PATH" \
             "${ISO_PATH}.sha256"
+        rm -f "$notes_file"
     fi
 
     local release_url

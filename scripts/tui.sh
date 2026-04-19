@@ -104,10 +104,10 @@ step_username() {
 Introduce el nombre de usuario para el sistema.
 Este usuario recibirá los dotfiles y configuraciones.
 
-Si el usuario no existe, se creará automáticamente." $((H + 4)) $W "${SUDO_USER:-pinedux}")
+Si el usuario no existe, se creará automáticamente." $((H + 4)) $W "${SUDO_USER:-user}")
     
     if [[ -z "$user_input" ]]; then
-        user_input="${SUDO_USER:-pinedux}"
+        user_input="${SUDO_USER:-user}"
     fi
     
     USERNAME="$user_input"
