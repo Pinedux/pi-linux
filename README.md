@@ -294,6 +294,7 @@ sudo dd if=iso-output/pi-linux-*.iso of=/dev/sdX bs=4M status=progress
 - ✅ Entornos de escritorio pre-descargados (Plasma, GNOME, Hyprland)
 - ✅ Conexión de red automática via NetworkManager
 - ✅ Clona el repo desde GitHub y ejecuta el instalador
+- ✅ keyd-remapper — GUI para remapear teclados (incluido en la ISO)
 
 ---
 
@@ -317,6 +318,37 @@ git add -A
 git commit -m "feat: descripción del cambio"
 git push
 ```
+
+---
+
+## 📜 Licencia
+
+**Pi-Linux** está licenciado bajo la **GNU General Public License v3.0 (GPL-3.0)**.
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General de GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia, o (a tu elección) cualquier versión posterior.
+
+Este programa se distribuye con la esperanza de que sea útil, pero **SIN NINGUNA GARANTÍA**; sin siquiera la garantía implícita de **COMERCIABILIDAD** o **ADECUACIÓN A UN PROPÓSITO PARTICULAR**. Consulta la Licencia Pública General de GNU para más detalles.
+
+### 🔗 Atribución Obligatoria
+
+Si utilizas el código de este repositorio en otro proyecto, fork, sitio web o cualquier derivado, **es obligatorio mencionar y enlazar al repositorio principal**:
+
+> **Repositorio original:** https://github.com/Pinedux/pi-linux
+
+Esto aplica a distribuciones modificadas, forks, inclusiones parciales o uso del código en otros proyectos. El reconocimiento de la autoría original es un requisito fundamental del espíritu open source y de esta licencia.
+
+### Software de terceros incluido
+
+Este proyecto incluye y distribuye los siguientes proyectos de terceros, cada uno bajo su propia licencia:
+
+- **[keyd-remapper](https://github.com/Pinedux/keyd-remapper)** — GPL-3.0 | GUI para remapear teclados con [keyd](https://github.com/rvaiya/keyd)
+- **Archiso** — GPL-3.0 | Framework de construcción de ISOs live de Arch Linux
+- **HyDE** — MIT/GPL (según componentes) | Rice de Hyprland
+- **WhiteSur** — GPL-3.0 | Tema GTK/Icons/Sounds macOS-like
+- **Sweet** — GPL-3.0 | Tema KDE Plasma
+- **Catppuccin** — MIT | Paleta de colores y temas
+
+Consulta los respectivos repositorios para obtener el texto completo de sus licencias.
 
 ---
 

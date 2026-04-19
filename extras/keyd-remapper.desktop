@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Keyd Remapper
+Comment=Keyboard remapping GUI using keyd
+Exec=/opt/keyd-remapper/keyd-remapper-x86_64.AppImage
+Icon=keyd-remapper
+Type=Application
+Categories=System;Settings;
+Terminal=false

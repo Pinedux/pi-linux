@@ -65,6 +65,7 @@ sync_airootfs() {
     mkdir -p "${dst_dir}"/lib
     mkdir -p "${dst_dir}"/config
     mkdir -p "${dst_dir}"/scripts
+    mkdir -p "${dst_dir}"/extras
 
     cp -v "${src_dir}/pi-linux.sh" "${dst_dir}/pi-linux.sh"
     cp -v "${src_dir}/lib/pi-linux-common.sh" "${dst_dir}/lib/"
@@ -76,6 +77,12 @@ sync_airootfs() {
     for mod in "${src_dir}"/modules/*.sh; do
         cp -v "$mod" "${dst_dir}/modules/"
     done
+
+    # Copy extras (keyd-remapper AppImage, icons, desktop files) for offline install
+    if [[ -d "${src_dir}/extras" ]]; then
+        echo "[*] Sincronizando extras a airootfs..."
+        cp -v "${src_dir}"/extras/* "${dst_dir}/extras/" 2>/dev/null || true
+    fi
 
     chmod +x "${dst_dir}/pi-linux.sh"
     chmod +x "${dst_dir}/modules/"*.sh
