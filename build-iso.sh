@@ -111,6 +111,7 @@ build_iso() {
     fi
     
     echo "[*] Inyectando versión ${VERSION} en profiledef.sh..."
+    cp "${PROFILE_DIR}/profiledef.sh" "${PROFILE_DIR}/profiledef.sh.bak"
     sed -i "s/^iso_version=.*/iso_version=\"${VERSION}\"/" "${PROFILE_DIR}/profiledef.sh"
     
     echo "[*] Compilando ISO Pi-Linux v${VERSION} (esto puede tardar 15-30 min)..."
@@ -126,6 +127,11 @@ build_iso() {
         mkarchiso -v -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
     else
         mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+    fi
+    
+    # Restaurar profiledef.sh original para no ensuciar git
+    if [[ -f "${PROFILE_DIR}/profiledef.sh.bak" ]]; then
+        mv "${PROFILE_DIR}/profiledef.sh.bak" "${PROFILE_DIR}/profiledef.sh"
     fi
     
     echo ""

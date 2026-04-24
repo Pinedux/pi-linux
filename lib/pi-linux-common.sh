@@ -97,8 +97,19 @@ ensure_yay() {
     chown -R "${PI_REAL_USER}:${PI_REAL_USER}" "$tmpdir/yay"
     (
         cd "$tmpdir/yay"
-        sudo -u "${PI_REAL_USER}" makepkg -si --noconfirm
+        # Build only (no install) to avoid sudo password prompt in non-interactive envs
+        sudo -u "${PI_REAL_USER}" makepkg -s --noconfirm
     )
+    # Install the built package as root (no sudo password needed)
+    local pkg_file
+    pkg_file=$(find "$tmpdir/yay" -maxdepth 1 -name 'yay-*.pkg.tar.zst' | head -n1)
+    if [[ -f "$pkg_file" ]]; then
+        pacman -U --noconfirm "$pkg_file"
+    else
+        error "No se encontró el paquete yay compilado"
+        rm -rf "$tmpdir"
+        return 1
+    fi
     rm -rf "$tmpdir"
     success "yay instalado"
 }

@@ -45,7 +45,7 @@ on_error() {
     read -rp "Selecciona [1-3]: " choice
     case "$choice" in
         1) exec "$0" ;;
-        2) bash ;;
+        2) bash; exec "$0" ;;
         3)
             echo "STATUS=skipped" > "$INSTALL_MARKER"
             exit 0

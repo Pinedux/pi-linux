@@ -120,9 +120,14 @@ if is_yes "${INSTALL_LAZYVIM}"; then
     pi_backup "${PI_USER_HOME}/.local/state/nvim"
     pi_backup "${PI_USER_HOME}/.cache/nvim"
     
-    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/LazyVim/starter "${PI_USER_HOME}/.config/nvim" 2>/dev/null || warning "No se pudo clonar LazyVim starter"
-    rm -rf "${PI_USER_HOME}/.config/nvim/.git"
-    chown -R "${PI_REAL_USER}:${PI_REAL_USER}" "${PI_USER_HOME}/.config/nvim"
+    if sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/LazyVim/starter "${PI_USER_HOME}/.config/nvim" 2>/dev/null; then
+        rm -rf "${PI_USER_HOME}/.config/nvim/.git"
+        chown -R "${PI_REAL_USER}:${PI_REAL_USER}" "${PI_USER_HOME}/.config/nvim"
+        tracker_mark_installed "INSTALL_LAZYVIM" "y"
+        success "LazyVim instalado"
+    else
+        warning "No se pudo clonar LazyVim starter"
+    fi
     tracker_mark_installed "INSTALL_LAZYVIM" "y"
     success "LazyVim instalado"
 fi
@@ -130,18 +135,18 @@ fi
 if is_yes "${INSTALL_DOOMEMACS}"; then
     info "Instalando Doom Emacs..."
     install_pkg emacs
-    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 https://github.com/doomemacs/doomemacs "${PI_USER_HOME}/.config/emacs" 2>/dev/null || {
+    if ! sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 https://github.com/doomemacs/doomemacs "${PI_USER_HOME}/.config/emacs" 2>/dev/null; then
         warning "No se pudo clonar Doom Emacs"
-        return 0
-    }
-    # doom install puede ser muy largo y promptear; forzar no-confirm no es trivial,
-    # así que usamos timeout generoso y stdin desde /dev/null
-    if ! timeout 600 sudo -u "$PI_REAL_USER" "${PI_USER_HOME}/.config/emacs/bin/doom" install --force < /dev/null 2>/dev/null; then
-        warning "Doom install falló o excedió tiempo límite (10 min)"
+    else
+        # doom install puede ser muy largo y promptear; forzar no-confirm no es trivial,
+        # así que usamos timeout generoso y stdin desde /dev/null
+        if timeout 600 sudo -u "$PI_REAL_USER" "${PI_USER_HOME}/.config/emacs/bin/doom" install --force < /dev/null 2>/dev/null; then
+            tracker_mark_installed "INSTALL_DOOMEMACS" "y"
+            success "Doom Emacs instalado"
+        else
+            warning "Doom install falló o excedió tiempo límite (10 min)"
+        fi
     fi
-    sudo -u "$PI_REAL_USER" "${PI_USER_HOME}/.config/emacs/bin/doom" install
-    tracker_mark_installed "INSTALL_DOOMEMACS" "y"
-    success "Doom Emacs instalado"
 fi
 
 # ============================================
@@ -235,11 +240,14 @@ fi
 
 if is_yes "${INSTALL_OHMYTMUX}"; then
     info "Instalando Oh-My-Tmux..."
-    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/gpakosz/.tmux.git "${PI_USER_HOME}/.tmux" 2>/dev/null || warning "No se pudo clonar Oh-My-Tmux"
-    sudo -u "$PI_REAL_USER" ln -s -f "${PI_USER_HOME}/.tmux/.tmux.conf" "${PI_USER_HOME}/.tmux.conf"
-    sudo -u "$PI_REAL_USER" cp "${PI_USER_HOME}/.tmux/.tmux.conf.local" "${PI_USER_HOME}/.tmux.conf.local" 2>/dev/null || true
-    tracker_mark_installed "INSTALL_OHMYTMUX" "y"
-    success "Oh-My-Tmux instalado"
+    if sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/gpakosz/.tmux.git "${PI_USER_HOME}/.tmux" 2>/dev/null; then
+        sudo -u "$PI_REAL_USER" ln -s -f "${PI_USER_HOME}/.tmux/.tmux.conf" "${PI_USER_HOME}/.tmux.conf"
+        sudo -u "$PI_REAL_USER" cp "${PI_USER_HOME}/.tmux/.tmux.conf.local" "${PI_USER_HOME}/.tmux.conf.local" 2>/dev/null || true
+        tracker_mark_installed "INSTALL_OHMYTMUX" "y"
+        success "Oh-My-Tmux instalado"
+    else
+        warning "No se pudo clonar Oh-My-Tmux"
+    fi
 fi
 
 {

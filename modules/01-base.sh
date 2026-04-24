@@ -37,4 +37,9 @@ EOF
 systemctl enable NetworkManager
 systemctl --global enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
+# Set hostname if configured
+if [[ -n "${HOSTNAME:-}" ]]; then
+    hostnamectl set-hostname "$HOSTNAME" 2>/dev/null || true
+fi
+
 success "Sistema base instalado"

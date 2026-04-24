@@ -3,6 +3,7 @@ Description=Pi-Linux First Boot Installer
 After=network-online.target
 Wants=network-online.target
 Before=display-manager.service sddm.service
+ConditionPathExists=!/var/lib/pi-linux-installed
 
 [Service]
 Type=oneshot

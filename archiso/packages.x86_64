@@ -156,3 +156,14 @@ power-profiles-daemon
 bluez-utils
 libinput
 xf86-input-libinput
+
+# Safe mode / Live desktop fallbacks
+xf86-video-fbdev
+xf86-video-vesa
+fuse2
+
+# Desktop portals and theming
+xdg-desktop-portal-kde
+xdg-desktop-portal-gtk
+qt6-svg
+breeze

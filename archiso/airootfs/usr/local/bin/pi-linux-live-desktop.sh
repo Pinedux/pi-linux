@@ -118,6 +118,7 @@ chmod 440 /etc/sudoers.d/99-liveuser
 # ============================================
 systemctl enable sddm --force 2>/dev/null || true
 systemctl enable NetworkManager 2>/dev/null || true
+systemctl disable dhcpcd --now 2>/dev/null || true
 
 # Marcar setup completado
 touch "$SETUP_MARKER"

@@ -1,6 +1,6 @@
 [Unit]
 Description=Pi-Linux Live Desktop Setup
-After=systemd-user-sessions.service
+After=systemd-user-sessions.service network-online.target
 Before=sddm.service display-manager.service
 Wants=network-online.target
 

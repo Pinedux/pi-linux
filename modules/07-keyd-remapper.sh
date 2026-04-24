@@ -27,7 +27,7 @@ fi
 
 # Install keyd daemon (required runtime dependency)
 echo "[*] Instalando keyd daemon..."
-install_pkg keyd
+install_pkg keyd fuse2
 
 # Ensure keyd service is enabled and started
 systemctl enable keyd.service --now 2>/dev/null || true

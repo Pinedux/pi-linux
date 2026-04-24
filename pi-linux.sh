@@ -595,8 +595,14 @@ main() {
         # Asegurar que el usuario del config existe
         if [[ -n "${USERNAME:-}" ]] && ! id "$USERNAME" &>/dev/null; then
             warning "El usuario '$USERNAME' no existe. Creándolo..."
-            useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null || \
-            useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"
+            if useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null; then
+                : # success
+            elif useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"; then
+                : # fallback success
+            else
+                error "No se pudo crear el usuario '$USERNAME' en modo desatendido."
+                exit 1
+            fi
             local user_pass="${USER_PASSWORD:-$USERNAME}"
             echo "${USERNAME}:${user_pass}" | chpasswd
             info "Usuario '$USERNAME' creado con contraseña: $user_pass"
@@ -636,6 +642,8 @@ main() {
                     ;;
                 2)
                     info "Re-ejecutando instalación completa..."
+                    # Borrar tracker para que todos los módulos se ejecuten de nuevo
+                    rm -f "$PI_TRACKER_FILE"
                     ;;
                 3)
                     tracker_show_summary

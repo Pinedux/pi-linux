@@ -29,14 +29,9 @@ install_pkg inotify-tools
 
 # Create user directories and install script for the main user
 # Note: This runs during installation as root, so we set up for the target user
-if [[ -n "${PI_USERNAME:-}" ]]; then
-    USER_HOME="/home/$PI_USERNAME"
-    USER_NAME="$PI_USERNAME"
-else
-    # Fallback: detect first non-system user with home directory
-    USER_NAME="$(awk -F: '$3 >= 1000 && $3 < 65534 {print $1; exit}' /etc/passwd)"
-    USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
-fi
+# PI_REAL_USER and PI_USER_HOME are defined in pi-linux-common.sh
+USER_NAME="$PI_REAL_USER"
+USER_HOME="$PI_USER_HOME"
 
 if [[ -z "$USER_NAME" || ! -d "$USER_HOME" ]]; then
     echo "[!] No se encontró usuario objetivo. Saltando configuración de usuario."

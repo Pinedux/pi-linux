@@ -131,16 +131,26 @@ Pulsa OK para continuar."
 }
 
 step_username() {
-    local user_input
-    user_input=$($TUI $ARGS --title "Usuario del Sistema" --inputbox "
+    local user_input=""
+    while true; do
+        user_input=$($TUI $ARGS --title "Usuario del Sistema" --inputbox "
 Introduce el nombre de usuario para el sistema.
 Este usuario recibirá los dotfiles y configuraciones.
 
-Si el usuario no existe, se creará automáticamente." $((H + 4)) $W "${SUDO_USER:-user}")
-    
-    if [[ -z "$user_input" ]]; then
-        user_input="${SUDO_USER:-user}"
-    fi
+Solo letras minúsculas, números, guión y guión bajo.
+Debe empezar con letra o guión bajo." $((H + 4)) $W "${SUDO_USER:-user}")
+        
+        if [[ -z "$user_input" ]]; then
+            user_input="${SUDO_USER:-user}"
+        fi
+        
+        # Validar formato de nombre de usuario Linux
+        if [[ "$user_input" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+            break
+        else
+            tui_msg "Nombre inválido" "El nombre '$user_input' no es válido.\n\nUsa solo letras minúsculas, números, guiones y guiones bajos. Debe empezar con letra o guión bajo."
+        fi
+    done
     
     USERNAME="$user_input"
     export USERNAME
@@ -309,7 +319,7 @@ step_running() {
     (
         # --yes prevents pi-linux.sh from hanging on interactive reads
         # when stdin is not a tty (which happens inside this subshell)
-        bash "$PI_LINUX" --unattended --yes >> "$logfile" 2>&1
+        bash "$PI_LINUX" --unattended --yes --yes >> "$logfile" 2>&1
     ) &
     local pid=$!
     
@@ -334,7 +344,7 @@ step_running() {
         done
     } | $TUI $ARGS --title "Instalando Pi-Linux" --gauge "\nIniciando instalación..." $((H + 6)) $W 0
     
-    wait $pid 2>/dev/null || true
+    wait $pid 2>/dev/null
     local exit_code=$?
     
     if [[ $elapsed -ge $max_runtime ]]; then
@@ -515,7 +525,11 @@ run_addon_modules() {
                 done
             } | $TUI $ARGS --title "Software Adicional" --gauge "\nInstalando..." $((H + 6)) $W 0
             
-            wait $pid 2>/dev/null || true
+            wait $pid 2>/dev/null
+            local addon_exit=$?
+            if [[ $addon_exit -ne 0 ]]; then
+                tui_msg "Error" "El módulo $basename_module falló (código $addon_exit).\n\nLog: $logfile"
+            fi
         fi
     done
 }
@@ -601,6 +615,10 @@ Pulsa OK para volver al menú principal."
     
     local mode
     mode=$(step_mode)
+    if [[ -z "$mode" ]]; then
+        tui_msg "Cancelado" "Instalación cancelada."
+        exit 0
+    fi
     
     local de=""
     local rice=""
@@ -616,6 +634,10 @@ Pulsa OK para volver al menú principal."
         express)
             local preset
             preset=$(step_express)
+            if [[ -z "$preset" ]]; then
+                tui_msg "Cancelado" "Instalación cancelada."
+                exit 0
+            fi
             case "$preset" in
                 hyprland-hyde)
                     de="hyprland"
@@ -639,25 +661,55 @@ Pulsa OK para volver al menú principal."
             
         advanced)
             de=$(step_desktop_env)
+            if [[ -z "$de" ]]; then
+                tui_msg "Cancelado" "Instalación cancelada."
+                exit 0
+            fi
             case "$de" in
                 plasma)
                     rice=$(step_rice_plasma)
+                    if [[ -z "$rice" ]]; then
+                        tui_msg "Cancelado" "Instalación cancelada."
+                        exit 0
+                    fi
                     ;;
                 gnome)
                     rice=$(step_rice_gnome)
+                    if [[ -z "$rice" ]]; then
+                        tui_msg "Cancelado" "Instalación cancelada."
+                        exit 0
+                    fi
                     ;;
                 hyprland)
                     rice=$(step_rice_hyprland)
+                    if [[ -z "$rice" ]]; then
+                        tui_msg "Cancelado" "Instalación cancelada."
+                        exit 0
+                    fi
                     ;;
             esac
             gpu=$(step_gpu)
+            if [[ -z "$gpu" ]]; then
+                tui_msg "Cancelado" "Instalación cancelada."
+                exit 0
+            fi
             ;;
             
         unattended)
-            bash "$PI_LINUX" --unattended
+            bash "$PI_LINUX" --unattended --yes
+            exit 0
+            ;;
+        *)
+            tui_msg "Cancelado" "Modo de instalación no válido o cancelado."
             exit 0
             ;;
     esac
+    
+    # Validar que tenemos DE y rice antes de continuar
+    if [[ -z "$de" || -z "$rice" ]]; then
+        tui_msg "Error" "No se seleccionó un entorno de escritorio o rice válido."
+        exit 1
+    fi
     
     # Preguntar usuario del sistema antes de confirmar
     step_username

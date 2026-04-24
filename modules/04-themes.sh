@@ -92,7 +92,7 @@ apply_gnome_rice() {
     info "Aplicando rice GNOME: $rice"
     
     # Instalar dependencias comunes
-    install_pkg gnome-browser-connector gnome-shell-extensions
+    install_pkg gnome-browser-connector gnome-shell-extensions 2>/dev/null || true
     
     # Instalar Bibata cursor si no existe
     install_aur bibata-cursor-theme 2>/dev/null || true
@@ -171,7 +171,7 @@ apply_gnome_rice() {
             (
                 cd "$tmpdir/catppuccin-gtk"
                 # Requiere python para el instalador
-                install_pkg python
+                install_pkg python 2>/dev/null || true
                 python install.py mocha -a blue 2>/dev/null || true
             )
             
@@ -254,7 +254,7 @@ apply_plasma_rice() {
     info "Aplicando rice Plasma: $rice"
     
     # Dependencias comunes
-    install_pkg kvantum kvantum-qt5 qt5ct qt6ct
+    install_pkg kvantum kvantum-qt5 qt5ct qt6ct 2>/dev/null || true
     
     # Cursor Bibata
     install_aur bibata-cursor-theme 2>/dev/null || true
