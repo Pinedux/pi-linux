@@ -16,6 +16,11 @@ fi
 echo "[Pi-Linux Live] Configurando entorno de escritorio..."
 
 # ============================================
+# DESHABILITAR GETTY@TTY1 (no competir con SDDM)
+# ============================================
+systemctl disable getty@tty1 --now 2>/dev/null || true
+
+# ============================================
 # CREAR USUARIO LIVE
 # ============================================
 if ! id "$LIVE_USER" &>/dev/null; then
@@ -116,7 +121,4 @@ systemctl enable NetworkManager 2>/dev/null || true
 
 # Marcar setup completado
 touch "$SETUP_MARKER"
-echo "[Pi-Linux Live] Setup completado. Reiniciando SDDM..."
-
-# Reiniciar SDDM para aplicar autologin
-systemctl restart sddm 2>/dev/null || true
+echo "[Pi-Linux Live] Setup completado."

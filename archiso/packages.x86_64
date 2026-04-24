@@ -132,3 +132,27 @@ file-roller
 otf-font-awesome
 ttf-jetbrains-mono-nerd
 ttf-fira-code
+
+# Live Desktop (Plasma + SDDM)
+sddm
+sddm-kcm
+plasma-desktop
+konsole
+dolphin
+kscreen
+breeze-icons
+
+# Audio/Video
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+mesa
+v4l-utils
+
+# Input / Power / Bluetooth
+upower
+power-profiles-daemon
+bluez-utils
+libinput
+xf86-input-libinput
