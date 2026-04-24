@@ -2,6 +2,7 @@
 Description=Pi-Linux First Boot Installer
 After=network-online.target
 Wants=network-online.target
+Before=display-manager.service sddm.service
 
 [Service]
 Type=oneshot

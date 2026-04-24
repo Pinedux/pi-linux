@@ -578,8 +578,15 @@ main() {
     print_banner
     check_connection
     
-    # Verificar si hay argumento --unattended
-    if [[ "${1:-}" == "--unattended" ]]; then
+    # Verificar si hay argumento --unattended en cualquier posición
+    local has_unattended=false
+    for arg in "$@"; do
+        if [[ "$arg" == "--unattended" ]]; then
+            has_unattended=true
+            break
+        fi
+    done
+    if [[ "$has_unattended" == true ]]; then
         info "Modo desatendido activado"
         # In unattended mode, never prompt interactively
         FORCE_YES=true
@@ -590,8 +597,9 @@ main() {
             warning "El usuario '$USERNAME' no existe. Creándolo..."
             useradd -m -G wheel,audio,video,storage,optical,network -s /bin/bash "$USERNAME" 2>/dev/null || \
             useradd -m -G users,audio,video,storage -s /bin/bash "$USERNAME"
-            echo "Establece contraseña para $USERNAME:"
-            passwd "$USERNAME"
+            local user_pass="${USER_PASSWORD:-$USERNAME}"
+            echo "${USERNAME}:${user_pass}" | chpasswd
+            info "Usuario '$USERNAME' creado con contraseña: $user_pass"
         fi
         
         # Librería ya cargada al inicio

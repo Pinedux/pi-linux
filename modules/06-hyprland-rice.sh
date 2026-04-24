@@ -71,7 +71,11 @@ install_hyde() {
     fi
     
     # Clonar
-    pi_clone "https://github.com/HyDE-Project/HyDE.git" "$hyde_dir"
+    if ! pi_clone "https://github.com/HyDE-Project/HyDE.git" "$hyde_dir"; then
+        warning "No se pudo descargar HyDE. Se usará fallback."
+        install_fallback_dotfiles
+        return 0
+    fi
     
     # HyDE tiene su propio script de instalación
     cd "$hyde_dir/Scripts"
@@ -88,7 +92,9 @@ install_hyde() {
         
         # HyDE's install.sh típicamente pide sudo internamente para pacman
         # pero copia dotfiles como el usuario actual.
-        sudo -u "${PI_REAL_USER}" bash "${hyde_dir}/Scripts/install.sh" 2>/dev/null || {
+        # Redirect stdin from /dev/null to prevent interactive prompts from hanging
+        # in non-TTY environments (e.g., systemd services or gauge subshells).
+        sudo -u "${PI_REAL_USER}" bash "${hyde_dir}/Scripts/install.sh" < /dev/null 2>/dev/null || {
             warning "El instalador de HyDE falló o requiere interacción."
             warning "Puedes instalarlo manualmente después con:"
             warning "  git clone --depth 1 https://github.com/HyDE-Project/HyDE ~/HyDE"
@@ -115,7 +121,12 @@ install_ml4w() {
     info "Ideal para principiantes. Incluye ISO live y apps GUI de configuración."
     
     # ML4W se instala con un one-liner
-    sudo -u "${PI_REAL_USER}" bash <(curl -s https://ml4w.com/os/stable) 2>/dev/null || {
+    # Usar timeout y /dev/null para evitar hangs en entornos no interactivos
+    if ! timeout 300 curl -fsSL -m 60 https://ml4w.com/os/stable -o /tmp/ml4w_installer.sh 2>/dev/null; then
+        warning "No se pudo descargar el instalador de ML4W (timeout red)"
+        return 1
+    fi
+    sudo -u "${PI_REAL_USER}" bash /tmp/ml4w_installer.sh < /dev/null 2>/dev/null || {
         warning "El instalador de ML4W falló."
         warning "Puedes probar la versión rolling: bash <(curl -s https://ml4w.com/os/rolling)"
         return 1
@@ -133,7 +144,11 @@ install_end4() {
     info "El rice visualmente más impresionante. Requiere Quickshell."
     
     # end-4 usa un one-liner
-    sudo -u "${PI_REAL_USER}" bash <(curl -s https://ii.clsty.link/get) 2>/dev/null || {
+    if ! timeout 300 curl -fsSL -m 60 https://ii.clsty.link/get -o /tmp/end4_installer.sh 2>/dev/null; then
+        warning "No se pudo descargar el instalador de end-4 (timeout red)"
+        return 1
+    fi
+    sudo -u "${PI_REAL_USER}" bash /tmp/end4_installer.sh < /dev/null 2>/dev/null || {
         warning "El instalador de end-4 falló."
         warning "Alternativa manual: git clone https://github.com/end-4/dots-hyprland && cd dots-hyprland && ./setup install"
         return 1

@@ -12,6 +12,34 @@ PI_LINUX="${SCRIPT_DIR}/pi-linux.sh"
 # (e.g. iwctl, nmtui) from leaking into whiptail dialogs
 tput reset 2>/dev/null || true
 
+# ============================================
+# MATRIX COLOR SCHEME FOR WHIPTAIL/NEWT
+# ============================================
+export NEWT_COLORS='
+root=green,black
+border=green,black
+window=green,black
+shadow=green,black
+title=green,black
+button=black,green
+actbutton=white,green
+checkbox=green,black
+actcheckbox=green,black
+entry=green,black
+label=green,black
+listbox=green,black
+actlistbox=green,black
+textbox=green,black
+acttextbox=green,black
+helpline=green,black
+roottext=green,black
+emptyscale=green,black
+fullscale=green,black
+disabledentry=gray,black
+compactbutton=green,black
+'
+export TERM=xterm-256color
+
 # Cargar librería común si existe (para tracker en modo re-run)
 if [[ -f "${SCRIPT_DIR}/lib/pi-linux-common.sh" ]]; then
     source "${SCRIPT_DIR}/lib/pi-linux-common.sh"
@@ -285,17 +313,34 @@ step_running() {
     ) &
     local pid=$!
     
+    # Safety timeout: kill installer if it runs longer than 2 hours
+    local max_runtime=7200
+    local elapsed=0
+    
     {
         while kill -0 $pid 2>/dev/null; do
             local lastline
             lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
             echo -e "XXX\n0\nInstalando Pi-Linux:\n  DE:   $de\n  Rice: $rice\n\n$lastline\nXXX"
             sleep 2
+            elapsed=$((elapsed + 2))
+            if [[ $elapsed -ge $max_runtime ]]; then
+                echo -e "XXX\n0\n⏱️ TIMEOUT: La instalación excedió 2h. Abortando...\nXXX"
+                kill -TERM $pid 2>/dev/null || true
+                sleep 5
+                kill -KILL $pid 2>/dev/null || true
+                break
+            fi
         done
     } | $TUI $ARGS --title "Instalando Pi-Linux" --gauge "\nIniciando instalación..." $((H + 6)) $W 0
     
-    wait $pid
+    wait $pid 2>/dev/null || true
     local exit_code=$?
+    
+    if [[ $elapsed -ge $max_runtime ]]; then
+        tui_msg "Error de Instalación" "La instalación fue abortada por exceder el tiempo máximo (2h).\n\nLog: $logfile"
+        return 1
+    fi
     
     if [[ $exit_code -ne 0 ]]; then
         tui_msg "Error de Instalación" "La instalación falló (código $exit_code).\n\nLog: $logfile"
@@ -450,16 +495,27 @@ run_addon_modules() {
             local basename_module
             basename_module=$(basename "$module")
             
+            local max_runtime=3600
+            local elapsed=0
+            
             {
                 while kill -0 $pid 2>/dev/null; do
                     local lastline
                     lastline=$(tail -n 1 "$logfile" 2>/dev/null | cut -c1-60)
                     echo -e "XXX\n0\nInstalando software adicional...\n$basename_module\n\n$lastline\nXXX"
                     sleep 2
+                    elapsed=$((elapsed + 2))
+                    if [[ $elapsed -ge $max_runtime ]]; then
+                        echo -e "XXX\n0\n⏱️ TIMEOUT: Módulo excedió 1h. Abortando...\nXXX"
+                        kill -TERM $pid 2>/dev/null || true
+                        sleep 5
+                        kill -KILL $pid 2>/dev/null || true
+                        break
+                    fi
                 done
             } | $TUI $ARGS --title "Software Adicional" --gauge "\nInstalando..." $((H + 6)) $W 0
             
-            wait $pid
+            wait $pid 2>/dev/null || true
         fi
     done
 }

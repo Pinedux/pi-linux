@@ -118,7 +118,11 @@ fi
 if is_yes "${INSTALL_NODEJS}"; then
     info "Instalando Node.js..."
     install_pkg nodejs npm
-    sudo -u "$PI_REAL_USER" bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash" 2>/dev/null || true
+    if timeout 120 curl -fsSL -m 60 -o /tmp/nvm_install.sh https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh 2>/dev/null; then
+        sudo -u "$PI_REAL_USER" bash /tmp/nvm_install.sh 2>/dev/null || true
+    else
+        warning "No se pudo descargar nvm (timeout red)"
+    fi
     tracker_mark_installed "INSTALL_NODEJS" "y"
     success "Node.js instalado"
 fi

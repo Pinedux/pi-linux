@@ -82,11 +82,15 @@ fi
 
 if is_yes "${INSTALL_ATUIN}"; then
     info "Instalando Atuin..."
-    if sudo -u "$PI_REAL_USER" bash -c "curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh" 2>/dev/null; then
-        tracker_mark_installed "INSTALL_ATUIN" "y"
-        success "Atuin instalado"
+    if timeout 120 curl --proto '=https' --tlsv1.2 -LsSf -m 60 -o /tmp/atuin_install.sh https://setup.atuin.sh 2>/dev/null; then
+        if sudo -u "$PI_REAL_USER" sh /tmp/atuin_install.sh 2>/dev/null; then
+            tracker_mark_installed "INSTALL_ATUIN" "y"
+            success "Atuin instalado"
+        else
+            warning "No se pudo ejecutar el instalador de Atuin"
+        fi
     else
-        warning "No se pudo instalar Atuin"
+        warning "No se pudo descargar Atuin (timeout red)"
     fi
 fi
 
@@ -116,7 +120,7 @@ if is_yes "${INSTALL_LAZYVIM}"; then
     pi_backup "${PI_USER_HOME}/.local/state/nvim"
     pi_backup "${PI_USER_HOME}/.cache/nvim"
     
-    sudo -u "$PI_REAL_USER" git clone https://github.com/LazyVim/starter "${PI_USER_HOME}/.config/nvim"
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/LazyVim/starter "${PI_USER_HOME}/.config/nvim" 2>/dev/null || warning "No se pudo clonar LazyVim starter"
     rm -rf "${PI_USER_HOME}/.config/nvim/.git"
     chown -R "${PI_REAL_USER}:${PI_REAL_USER}" "${PI_USER_HOME}/.config/nvim"
     tracker_mark_installed "INSTALL_LAZYVIM" "y"
@@ -126,7 +130,15 @@ fi
 if is_yes "${INSTALL_DOOMEMACS}"; then
     info "Instalando Doom Emacs..."
     install_pkg emacs
-    sudo -u "$PI_REAL_USER" git clone --depth 1 https://github.com/doomemacs/doomemacs "${PI_USER_HOME}/.config/emacs"
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 https://github.com/doomemacs/doomemacs "${PI_USER_HOME}/.config/emacs" 2>/dev/null || {
+        warning "No se pudo clonar Doom Emacs"
+        return 0
+    }
+    # doom install puede ser muy largo y promptear; forzar no-confirm no es trivial,
+    # así que usamos timeout generoso y stdin desde /dev/null
+    if ! timeout 600 sudo -u "$PI_REAL_USER" "${PI_USER_HOME}/.config/emacs/bin/doom" install --force < /dev/null 2>/dev/null; then
+        warning "Doom install falló o excedió tiempo límite (10 min)"
+    fi
     sudo -u "$PI_REAL_USER" "${PI_USER_HOME}/.config/emacs/bin/doom" install
     tracker_mark_installed "INSTALL_DOOMEMACS" "y"
     success "Doom Emacs instalado"
@@ -171,12 +183,16 @@ fi
 
 if is_yes "${INSTALL_OHMYZSH}"; then
     info "Instalando Oh-My-Zsh..."
-    sudo -u "$PI_REAL_USER" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    if timeout 120 curl -fsSL -m 60 -o /tmp/ohmyzsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh 2>/dev/null; then
+        sudo -u "$PI_REAL_USER" sh /tmp/ohmyzsh_install.sh "" --unattended
+    else
+        warning "No se pudo descargar Oh-My-Zsh (timeout red)"
+    fi
     
     # Plugins adicionales
-    sudo -u "$PI_REAL_USER" git clone https://github.com/zsh-users/zsh-autosuggestions "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions" 2>/dev/null || true
-    sudo -u "$PI_REAL_USER" git clone https://github.com/zsh-users/zsh-syntax-highlighting "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" 2>/dev/null || true
-    sudo -u "$PI_REAL_USER" git clone https://github.com/zdharma-continuum/fast-syntax-highlighting "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/fast-syntax-highlighting" 2>/dev/null || true
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 60 git clone https://github.com/zsh-users/zsh-autosuggestions "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions" 2>/dev/null || true
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 60 git clone https://github.com/zsh-users/zsh-syntax-highlighting "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" 2>/dev/null || true
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 60 git clone https://github.com/zdharma-continuum/fast-syntax-highlighting "${PI_USER_HOME}/.oh-my-zsh/custom/plugins/fast-syntax-highlighting" 2>/dev/null || true
     
     tracker_mark_installed "INSTALL_OHMYZSH" "y"
     success "Oh-My-Zsh instalado"
@@ -191,7 +207,11 @@ fi
 
 if is_yes "${INSTALL_STARSHIP}"; then
     info "Instalando Starship..."
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
+    if timeout 120 curl -fsSL -m 60 -o /tmp/starship_install.sh https://starship.rs/install.sh 2>/dev/null; then
+        sh /tmp/starship_install.sh -y
+    else
+        warning "No se pudo descargar Starship (timeout red)"
+    fi
     if ! grep -q 'starship init bash' "${PI_USER_HOME}/.bashrc" 2>/dev/null; then
         echo 'eval "$(starship init bash)"' >> "$BASHRC_BLOCK"
     fi
@@ -215,7 +235,7 @@ fi
 
 if is_yes "${INSTALL_OHMYTMUX}"; then
     info "Instalando Oh-My-Tmux..."
-    sudo -u "$PI_REAL_USER" git clone https://github.com/gpakosz/.tmux.git "${PI_USER_HOME}/.tmux"
+    sudo -u "$PI_REAL_USER" GIT_TERMINAL_PROMPT=0 timeout 120 git clone https://github.com/gpakosz/.tmux.git "${PI_USER_HOME}/.tmux" 2>/dev/null || warning "No se pudo clonar Oh-My-Tmux"
     sudo -u "$PI_REAL_USER" ln -s -f "${PI_USER_HOME}/.tmux/.tmux.conf" "${PI_USER_HOME}/.tmux.conf"
     sudo -u "$PI_REAL_USER" cp "${PI_USER_HOME}/.tmux/.tmux.conf.local" "${PI_USER_HOME}/.tmux.conf.local" 2>/dev/null || true
     tracker_mark_installed "INSTALL_OHMYTMUX" "y"

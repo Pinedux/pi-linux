@@ -89,7 +89,11 @@ ensure_yay() {
     info "Instalando yay (AUR helper)..."
     local tmpdir
     tmpdir=$(mktemp -d)
-    git clone https://aur.archlinux.org/yay.git --depth=1 "$tmpdir/yay"
+    if ! timeout 120 git clone https://aur.archlinux.org/yay.git --depth=1 "$tmpdir/yay"; then
+        error "No se pudo clonar yay desde AUR (timeout red)"
+        rm -rf "$tmpdir"
+        return 1
+    fi
     chown -R "${PI_REAL_USER}:${PI_REAL_USER}" "$tmpdir/yay"
     (
         cd "$tmpdir/yay"
@@ -101,10 +105,11 @@ ensure_yay() {
 
 install_aur() {
     ensure_yay
-    sudo -u "${PI_REAL_USER}" yay -S --needed --noconfirm "$@" 2>/dev/null || {
-        warning "Falló la instalación AUR de: $*"
+    # AUR builds can take a very long time; use a generous timeout
+    if ! timeout 1800 sudo -u "${PI_REAL_USER}" yay -S --needed --noconfirm "$@" 2>/dev/null; then
+        warning "Falló la instalación AUR de: $* (timeout o error)"
         return 1
-    }
+    fi
 }
 
 # ============================================
@@ -240,10 +245,11 @@ pi_clone() {
         rm -rf "$dest"
     fi
     
-    git clone --depth="$depth" "$repo" "$dest" || {
-        error "No se pudo clonar $repo"
+    # GIT_TERMINAL_PROMPT=0 prevents git from hanging on auth prompts
+    if ! GIT_TERMINAL_PROMPT=0 timeout 180 git clone --depth="$depth" "$repo" "$dest"; then
+        error "No se pudo clonar $repo (timeout red o repo no disponible)"
         return 1
-    }
+    fi
 }
 
 # ============================================

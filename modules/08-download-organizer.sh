@@ -66,11 +66,11 @@ if [[ -f "${LOCAL_SCRIPTS_DIR}/download-organizer.sh" ]]; then
     cp -v "${LOCAL_SCRIPTS_DIR}/download-organizer.sh" "$USER_HOME/.local/bin/pi-linux-download-organizer"
 else
     echo "[!] Script del organizador no encontrado en medios locales. Descargando..."
-    curl -fsSL -o "$USER_HOME/.local/bin/pi-linux-download-organizer" \
-        "https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/download-organizer.sh" || {
+    if ! timeout 60 curl -fsSL -m 30 -o "$USER_HOME/.local/bin/pi-linux-download-organizer" \
+        "https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/download-organizer.sh" 2>/dev/null; then
         error "No se pudo descargar el script del organizador"
         return 1
-    }
+    fi
 fi
 
 chmod +x "$USER_HOME/.local/bin/pi-linux-download-organizer"
