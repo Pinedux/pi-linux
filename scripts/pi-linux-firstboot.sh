@@ -19,6 +19,9 @@ fi
 mkdir -p "$(dirname "$INSTALL_MARKER")"
 echo "STATUS=in_progress" > "$INSTALL_MARKER"
 
+# Trap para capturar errores de set -e y dirigirlos a on_error
+trap 'on_error' ERR
+
 # Esperar a que haya red
 info_wait() {
     echo "[*] Esperando conexión a internet..."
@@ -34,11 +37,12 @@ info_wait() {
 }
 
 on_error() {
+    trap '' ERR
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  ⚠  La instalación no pudo completarse."
     echo ""
-    echo "  1) Reintentar (requiere internet)"
+    echo "  1) Reintentar"
     echo "  2) Abrir shell para diagnóstico manual"
     echo "  3) Saltar y continuar al login"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -66,17 +70,18 @@ echo "Este sistema tiene Arch Linux base instalado."
 echo "Pi-Linux configurará tu escritorio automáticamente."
 echo ""
 
-# Verificar red
-if ! info_wait; then
-    echo "⚠  No hay conexión a internet."
-    on_error
-fi
-
 # Preferir scripts locales (offline) si existen
 if [[ -d "$LOCAL_DIR" && -f "$LOCAL_DIR/scripts/tui.sh" ]]; then
     echo "[*] Usando scripts locales (offline)..."
     INSTALL_DIR="$LOCAL_DIR"
 else
+    # Verificar red antes de intentar descargar
+    if ! info_wait; then
+        echo "⚠  No hay conexión a internet y no hay scripts locales."
+        echo "   No se puede continuar sin uno de los dos."
+        on_error
+    fi
+
     # Clonar repo
     if [[ -d "$INSTALL_DIR" ]]; then
         rm -rf "$INSTALL_DIR"
@@ -92,10 +97,10 @@ else
 fi
 
 echo "[*] Iniciando instalador TUI..."
-cd "$INSTALL_DIR"
+cd "$INSTALL_DIR" || on_error
 chmod +x scripts/tui.sh
 
-# Ejecutar TUI con trap para capturar errores
+# Ejecutar TUI
 if bash scripts/tui.sh; then
     echo "STATUS=completed" > "$INSTALL_MARKER"
     echo ""
@@ -103,7 +108,7 @@ if bash scripts/tui.sh; then
     echo "   Reiniciando en 5 segundos..."
     echo ""
     sleep 5
-    systemctl reboot
+    systemctl reboot || true
 else
     echo "⚠  El instalador TUI falló."
     on_error

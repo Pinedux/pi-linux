@@ -307,6 +307,7 @@ case "$HYPR_RICE" in
 esac
 
 # Asegurar que SDDM puede lanzar Hyprland
+mkdir -p /usr/share/wayland-sessions
 if [[ ! -f /usr/share/wayland-sessions/hyprland.desktop ]]; then
     info "Creando entrada de sesión para Hyprland en SDDM..."
     cat > /usr/share/wayland-sessions/hyprland.desktop << 'DESKTOP'

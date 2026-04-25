@@ -122,11 +122,14 @@ build_iso() {
     # Ensure persistent pacman cache directory exists inside chroot path expectations
     mkdir -p "$PACMAN_CACHE"
     
+    # Ensure SUDO_ASKPASS is propagated to mkarchiso (which may call sudo internally)
+    export SUDO_ASKPASS="${SUDO_ASKPASS:-/tmp/askpass.sh}"
+    
     if [[ "$FAST_BUILD" == true ]]; then
         echo "[*] Modo FAST: reutilizando work dir y sin -r"
-        mkarchiso -v -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+        sudo -A mkarchiso -v -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
     else
-        mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
+        sudo -A mkarchiso -v -r -w "$WORK_DIR" -o "$OUTPUT_DIR" "$PROFILE_DIR"
     fi
     
     # Restaurar profiledef.sh original para no ensuciar git

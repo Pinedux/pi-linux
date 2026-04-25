@@ -237,21 +237,25 @@ select_username() {
     echo -e "${BOLD}Configuración del Usuario:${NC}"
     echo ""
     
-    # Sugerir el usuario actual (quien ejecutó sudo) o el de config
     local suggested="${USERNAME:-${SUDO_USER:-user}}"
-    read -rp "Nombre de usuario [$suggested]: " input_user
     
-    if [[ -n "$input_user" ]]; then
-        USERNAME="$input_user"
-    else
-        USERNAME="$suggested"
-    fi
-    
-    # Validate username (POSIX compliant: a-z, 0-9, _, -, cannot start with - or digit)
-    if ! [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-        error "Nombre de usuario inválido: '$USERNAME'. Solo minúsculas, números, guiones y guiones bajos. Debe empezar con letra o guión bajo."
-        return 1
-    fi
+    while true; do
+        read -rp "Nombre de usuario [$suggested]: " input_user
+        
+        if [[ -n "$input_user" ]]; then
+            USERNAME="$input_user"
+        else
+            USERNAME="$suggested"
+        fi
+        
+        # Validar formato de nombre de usuario Linux
+        if [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+            break
+        else
+            error "Nombre de usuario inválido: '$USERNAME'. Solo minúsculas, números, guiones y guiones bajos. Debe empezar con letra o guión bajo."
+            suggested="$USERNAME"
+        fi
+    done
     
     export USERNAME
     
@@ -484,7 +488,11 @@ load_unattended_config() {
         esac
         
         THEME="$RICE_TYPE"
-        export RICE_TYPE THEME HYPR_RICE INSTALL_GNOME_EXTENSIONS
+        export DESKTOP_ENV RICE_TYPE THEME HYPR_RICE INSTALL_GNOME_EXTENSIONS GPU_TYPE SDDM_THEME USERNAME HOSTNAME TIMEZONE LOCALE KEYMAP
+        # Exportar todas las variables INSTALL_*
+        for var in $(compgen -v INSTALL_ 2>/dev/null); do
+            export "$var"
+        done
         success "Configuración cargada"
     else
         warning "No se encontró unattended.conf, usando defaults"

@@ -16,7 +16,7 @@ echo ""
 echo "  ⚠️  ATENCIÓN: Se borrarán los datos del disco seleccionado."
 echo ""
 echo "  Opciones:"
-echo "    1) Ejecutar Pi-Linux TUI (instalador completo con rices)"
+echo "    1) Instalar Arch Linux + Pi-Linux (automático)"
 echo "    2) Ejecutar archinstall (instalador oficial de Arch)"
 echo "    3) Abrir terminal para instalación manual"
 echo "    4) Salir"
@@ -25,16 +25,16 @@ read -rp "  Selecciona [1-4]: " choice
 
 case "$choice" in
     1)
-        PI_LINUX_TUI="/usr/share/pi-linux/scripts/tui.sh"
-        if [[ -f "$PI_LINUX_TUI" ]]; then
+        DISK_INSTALLER="/usr/share/pi-linux/scripts/pi-linux-disk-installer.sh"
+        if [[ -f "$DISK_INSTALLER" ]]; then
             echo ""
-            echo "  🚀 Iniciando Pi-Linux TUI..."
+            echo "  🚀 Iniciando instalador de disco..."
             echo ""
             sleep 1
-            exec bash "$PI_LINUX_TUI"
+            exec bash "$DISK_INSTALLER"
         else
             echo ""
-            echo "  ❌ Pi-Linux TUI no encontrado en $PI_LINUX_TUI"
+            echo "  ❌ Instalador de disco no encontrado en $DISK_INSTALLER"
             echo ""
             read -rp "  Presiona Enter para salir..."
         fi

@@ -98,7 +98,7 @@ ensure_yay() {
     (
         cd "$tmpdir/yay"
         # Build only (no install) to avoid sudo password prompt in non-interactive envs
-        sudo -u "${PI_REAL_USER}" makepkg -s --noconfirm
+        timeout 600 sudo -u "${PI_REAL_USER}" makepkg -s --noconfirm
     )
     # Install the built package as root (no sudo password needed)
     local pkg_file
