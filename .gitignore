@@ -32,3 +32,15 @@ node_modules/
 # AIROOTFS: scripts sincronizados en build time (NO versionar copias)
 archiso/airootfs/usr/share/pi-linux/
 
+
+# Archivos sensibles de airootfs (generados en build-time)
+archiso/airootfs/etc/shadow
+archiso/airootfs/etc/gshadow
+archiso/airootfs/etc/passwd
+archiso/airootfs/etc/group
+archiso/airootfs/etc/machine-id
+archiso/airootfs/var/
+
+# Archivos temporales de desarrollo
+contexto.md
+output.txt

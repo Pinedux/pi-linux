@@ -1,0 +1,10 @@
+[compositing]
+OpenGLIsUnsafe=false
+
+[org.kde.kdecoration2]
+ButtonsOnLeft=
+ButtonsOnRight=IAX
+CloseOnDoubleClickOnMenu=false
+ShowToolTips=true
+library=org.kde.breeze
+theme=Breeze

@@ -1,0 +1,628 @@
+#!/bin/bash
+# Pi-Linux Easy Install v2.2
+# Instalador hibrido: modo Pi-Linux (automatico) o modo archinstall
+
+set -o pipefail
+
+# Forzar TERM para que dialog/ncurses funcione en cualquier terminal
+export TERM=xterm-256color
+export DIALOG_OK=0
+export DIALOG_CANCEL=1
+export DIALOG_ESC=255
+
+DIALOG_TITLE="Pi-Linux Installer"
+DIALOG_BACKTITLE="Pi-Linux v2.2"
+
+# ============================================
+# UTILIDADES
+# ============================================
+
+has_dialog() {
+    command -v dialog &>/dev/null
+}
+
+msg() {
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" --msgbox "$1" 12 60
+    else
+        clear
+        echo ""
+        echo "=== $DIALOG_TITLE ==="
+        echo ""
+        echo "$1"
+        echo ""
+        read -rp "Presiona Enter para continuar..."
+    fi
+}
+
+input_box() {
+    local prompt="$1"
+    local default="$2"
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" \
+            --inputbox "$prompt" 10 60 "$default" 3>&1 1>&2 2>&3
+    else
+        clear
+        echo ""
+        echo "$prompt"
+        read -rp "[$default]: " val
+        echo "${val:-$default}"
+    fi
+}
+
+password_box() {
+    local prompt="$1"
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" \
+            --passwordbox "$prompt" 10 60 3>&1 1>&2 2>&3
+    else
+        clear
+        echo ""
+        echo "$prompt"
+        read -rsp ": " val
+        echo ""
+        echo "$val"
+    fi
+}
+
+yes_no() {
+    local msg="$1"
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" --yesno "$msg" 10 60
+        return $?
+    else
+        clear
+        echo ""
+        echo "$msg"
+        read -rp "¿Continuar? [s/N]: " ans
+        [[ "$ans" == "s" || "$ans" == "S" ]]
+        return $?
+    fi
+}
+
+menu() {
+    local prompt="$1"
+    shift
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" \
+            --menu "$prompt" 20 70 12 "$@" 3>&1 1>&2 2>&3
+    else
+        clear
+        echo ""
+        echo "$prompt"
+        echo ""
+        local i=1
+        while [[ $# -ge 2 ]]; do
+            echo "  $i) $1 - $2"
+            shift 2
+            i=$((i+1))
+        done
+        read -rp "Selecciona: " sel
+        echo "$sel"
+    fi
+}
+
+checklist() {
+    local prompt="$1"
+    shift
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" \
+            --checklist "$prompt" 22 70 16 "$@" 3>&1 1>&2 2>&3
+    else
+        clear
+        echo ""
+        echo "$prompt"
+        echo "Escribe los numeros separados por espacios:"
+        echo ""
+        local i=1
+        while [[ $# -ge 3 ]]; do
+            local state="[ ]"
+            [[ "$3" == "on" ]] && state="[x]"
+            echo "  $i) $state $1 - $2"
+            shift 3
+            i=$((i+1))
+        done
+        read -rp "Seleccion: " sel
+        # Convertir numeros a tags
+        echo "$sel"
+    fi
+}
+
+info_box() {
+    if has_dialog; then
+        dialog --clear --title "$DIALOG_TITLE" --backtitle "$DIALOG_BACKTITLE" --infobox "$1" 8 60
+    else
+        clear
+        echo ""
+        echo "[*] $1"
+    fi
+}
+
+fatal() {
+    msg "ERROR:\n\n$1"
+    exit 1
+}
+
+# ============================================
+# CONFIGURACION COMUN (DE, Rice, GPU, Software)
+# ============================================
+
+configure_pi_linux_options() {
+    DESKTOP_ENV=$(menu "Selecciona el Entorno de Escritorio:" \
+        "plasma" "KDE Plasma 6 - Moderno y customizable" \
+        "gnome" "GNOME 46/47 - Limpio y minimalista" \
+        "hyprland" "Hyprland - Tiling Wayland compositor")
+    [[ -z "$DESKTOP_ENV" ]] && DESKTOP_ENV="plasma"
+
+    case "$DESKTOP_ENV" in
+        plasma)
+            RICE=$(menu "Selecciona el tema (Rice) para Plasma:" \
+                "sweet" "Sweet - Moderno oscuro con acentos rosas" \
+                "whitesur" "WhiteSur - Estilo macOS completo" \
+                "mactahoe" "MacTahoe - macOS Tahoe mas reciente" \
+                "layan" "Layan - Material Design purpura" \
+                "catppuccin" "Catppuccin - Pastel suave (Mocha)" \
+                "orchis" "Orchis - Material redondeado" \
+                "none" "Ninguno - Solo el DE sin temas")
+            ;;
+        gnome)
+            RICE=$(menu "Selecciona el tema (Rice) para GNOME:" \
+                "whitesur" "WhiteSur - Estilo macOS completo" \
+                "orchis" "Orchis - Material Design elegante" \
+                "graphite" "Graphite - Flat minimalista oscuro" \
+                "catppuccin" "Catppuccin - Pastel para developers" \
+                "nordic" "Nordic - Paleta Nord azul" \
+                "none" "Ninguno - Solo el DE sin temas")
+            ;;
+        hyprland)
+            RICE=$(menu "Selecciona el tema (Rice) para Hyprland:" \
+                "hyde" "HyDE - Recomendado oficial por Hyprland" \
+                "ml4w" "ML4W - Amigable para principiantes" \
+                "end4" "end-4 - Illogical Impulse (visualmente impresionante)" \
+                "none" "Ninguno - Config minima fallback")
+            ;;
+    esac
+    [[ -z "$RICE" ]] && RICE="none"
+
+    GPU_TYPE=$(menu "Selecciona el driver GPU:" \
+        "auto" "Auto-detectar (recomendado)" \
+        "nvidia" "NVIDIA (propietario)" \
+        "amd" "AMD (open-source)" \
+        "intel" "Intel (open-source)" \
+        "generic" "Generico / VM")
+    [[ -z "$GPU_TYPE" ]] && GPU_TYPE="auto"
+
+    SOFTWARE=$(checklist "Selecciona software adicional:" \
+        "chrome" "Google Chrome" off \
+        "brave" "Brave Browser" off \
+        "firefox" "Firefox" on \
+        "vscode" "Visual Studio Code" on \
+        "obsidian" "Obsidian" off \
+        "vlc" "VLC" on \
+        "spotify" "Spotify" on \
+        "kitty" "kitty terminal" on \
+        "alacritty" "Alacritty terminal" off \
+        "docker" "Docker" on \
+        "nodejs" "Node.js + npm" on \
+        "python" "Python completo" on \
+        "neovim" "Neovim" on \
+        "zsh" "Zsh + Oh-My-Zsh" on \
+        "btop" "btop monitor" on \
+        "starship" "Starship prompt" on)
+}
+
+generate_unattended() {
+    local de="$1"
+    local rice="$2"
+    local gpu="$3"
+    local software="$4"
+    local username="$5"
+    local hostname="$6"
+    local timezone="$7"
+    local locale="$8"
+    local keymap="$9"
+
+    local hypr_rice="none"
+    local gnome_rice="none"
+    local plasma_rice="none"
+
+    case "$de" in
+        plasma) plasma_rice="$rice" ;;
+        gnome)  gnome_rice="$rice" ;;
+        hyprland) hypr_rice="$rice" ;;
+    esac
+
+    local sw_file="/tmp/pi-linux-sw.conf"
+    : > "$sw_file"
+    for item in $software; do
+        case "$item" in
+            chrome) echo 'INSTALL_CHROME="y"' >> "$sw_file" ;;
+            brave) echo 'INSTALL_BRAVE="y"' >> "$sw_file" ;;
+            firefox) echo 'INSTALL_FIREFOX="y"' >> "$sw_file" ;;
+            vscode) echo 'INSTALL_VSCODE="y"' >> "$sw_file" ;;
+            obsidian) echo 'INSTALL_OBSIDIAN="y"' >> "$sw_file" ;;
+            vlc) echo 'INSTALL_VLC="y"' >> "$sw_file" ;;
+            spotify) echo 'INSTALL_SPOTIFY="y"' >> "$sw_file" ;;
+            kitty) echo 'INSTALL_KITTY="y"' >> "$sw_file" ;;
+            alacritty) echo 'INSTALL_ALACRITTY="y"' >> "$sw_file" ;;
+            docker) echo 'INSTALL_DOCKER="y"' >> "$sw_file" ;;
+            nodejs) echo 'INSTALL_NODEJS="y"' >> "$sw_file" ;;
+            python) echo 'INSTALL_PYTHON="y"' >> "$sw_file" ;;
+            neovim) echo 'INSTALL_NEOVIM="y"' >> "$sw_file" ;;
+            zsh) echo 'INSTALL_ZSH="y"' >> "$sw_file"; echo 'INSTALL_OHMYZSH="y"' >> "$sw_file" ;;
+            btop) echo 'INSTALL_BTOP="y"' >> "$sw_file" ;;
+            starship) echo 'INSTALL_STARSHIP="y"' >> "$sw_file" ;;
+        esac
+    done
+
+    cat > /tmp/unattended.conf <<EOF
+#!/bin/bash
+DESKTOP_ENV="$de"
+GPU_TYPE="$gpu"
+USERNAME="$username"
+HOSTNAME="$hostname"
+TIMEZONE="$timezone"
+LOCALE="$locale"
+KEYMAP="$keymap"
+HYPR_RICE="$hypr_rice"
+GNOME_RICE="$gnome_rice"
+PLASMA_RICE="$plasma_rice"
+THEME="$rice"
+SDDM_THEME="astronaut"
+INSTALL_GNOME_EXTENSIONS="y"
+EOF
+    cat "$sw_file" >> /tmp/unattended.conf
+}
+
+copy_pi_linux_to_target() {
+    local mnt="$1"
+    info_box "Copiando scripts de Pi-Linux..."
+
+    local dst="$mnt/usr/share/pi-linux"
+    mkdir -p "$dst"
+
+    if [[ -d /usr/share/pi-linux ]]; then
+        cp -r /usr/share/pi-linux/* "$dst/"
+    elif [[ -d /run/archiso/bootmnt/pilinux ]]; then
+        cp -r /run/archiso/bootmnt/pilinux/* "$dst/"
+    fi
+
+    mkdir -p "$dst/config"
+    cp /tmp/unattended.conf "$dst/config/unattended.conf"
+
+    # Wrapper firstboot
+    cat > "$mnt/usr/local/bin/pi-linux-firstboot" <<'EOF'
+#!/bin/bash
+exec bash /usr/share/pi-linux/scripts/pi-linux-firstboot.sh "$@"
+EOF
+    chmod +x "$mnt/usr/local/bin/pi-linux-firstboot"
+
+    if [[ -f "$dst/scripts/pi-linux-firstboot.service" ]]; then
+        cp "$dst/scripts/pi-linux-firstboot.service" "$mnt/etc/systemd/system/"
+        arch-chroot "$mnt" systemctl enable pi-linux-firstboot.service 2>/dev/null || true
+    fi
+}
+
+# ============================================
+# MODO 1: PI-LINUX AUTOMATICO (particionado custom)
+# ============================================
+
+mode_pilinux_auto() {
+    if ! yes_no "ATENCION\n\nSe borraran TODOS los datos del disco seleccionado.\n\n¿Estas absolutamente seguro?"; then
+        return 1
+    fi
+
+    # Intentar cargar modulos de almacenamiento por si no estan activos
+    modprobe nvme nvme_core vmd ahci sd_mod scsi_mod dm_mod md_mod 2>/dev/null || true
+    sleep 1
+
+    local disks=()
+    while IFS= read -r line; do
+        local dev size model
+        dev=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        model=$(echo "$line" | cut -d' ' -f3-)
+        disks+=("$dev" "$size $model")
+    done < <(lsblk -dn -o NAME,SIZE,MODEL,TYPE | awk '$4 == "disk" {print "/dev/" $1, $2, $3}')
+
+    if [[ ${#disks[@]} -eq 0 ]]; then
+        # Segundo intento tras recargar udev
+        udevadm trigger --subsystem-match=block 2>/dev/null || true
+        udevadm settle 2>/dev/null || true
+        sleep 2
+        while IFS= read -r line; do
+            local dev size model
+            dev=$(echo "$line" | awk '{print $1}')
+            size=$(echo "$line" | awk '{print $2}')
+            model=$(echo "$line" | cut -d' ' -f3-)
+            disks+=("$dev" "$size $model")
+        done < <(lsblk -dn -o NAME,SIZE,MODEL,TYPE | awk '$4 == "disk" {print "/dev/" $1, $2, $3}')
+    fi
+
+    if [[ ${#disks[@]} -eq 0 ]]; then
+        fatal "No se detectaron discos disponibles.\n\nPosibles causas:\n• Los discos estan en modo RAID/Intel RST en la BIOS. Cambia a AHCI.\n• Faltan drivers para el controlador de almacenamiento.\n• Discos NVMe no detectados por errores ACPI."
+    fi
+
+    local disk
+    disk=$(menu "Selecciona el disco de instalacion:" "${disks[@]}")
+    [[ -z "$disk" ]] && return 1
+
+    local hostname username userpass timezone locale keymap
+    hostname=$(input_box "Nombre del equipo (hostname):" "pi-linux")
+    username=$(input_box "Nombre de usuario:" "pi")
+    userpass=$(password_box "Contraseña para $username:")
+    timezone=$(input_box "Zona horaria (ej: Europe/Madrid):" "Europe/Madrid")
+    locale=$(input_box "Locale (ej: es_ES.UTF-8):" "es_ES.UTF-8")
+    keymap=$(input_box "Mapa de teclado (ej: es):" "es")
+
+    [[ -z "$hostname" ]] && hostname="pi-linux"
+    [[ -z "$username" ]] && username="pi"
+    [[ -z "$userpass" ]] && userpass="$username"
+    [[ -z "$timezone" ]] && timezone="Europe/Madrid"
+    [[ -z "$locale" ]] && locale="es_ES.UTF-8"
+    [[ -z "$keymap" ]] && keymap="es"
+
+    configure_pi_linux_options
+
+    local summary="Resumen:\n\nDisco: $disk\nHostname: $hostname\nUsuario: $username\nDE: $DESKTOP_ENV\nRice: $RICE\nGPU: $GPU_TYPE\n\n¿Continuar?"
+    if ! yes_no "$summary"; then
+        return 1
+    fi
+
+    # Particionado
+    info_box "Particionando $disk..."
+    umount -R "${disk}"* 2>/dev/null || true
+    swapoff "${disk}"* 2>/dev/null || true
+
+    local uefi_mode=false
+    [[ -d /sys/firmware/efi ]] && uefi_mode=true
+
+    if [[ "$uefi_mode" == true ]]; then
+        sgdisk --zap-all "$disk"
+        sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI" "$disk"
+        sgdisk -n 2:0:+4G   -t 2:8200 -c 2:"Swap" "$disk"
+        sgdisk -n 3:0:0     -t 3:8300 -c 3:"Root" "$disk"
+        local efi_part="${disk}1" swap_part="${disk}2" root_part="${disk}3"
+    else
+        sgdisk --zap-all "$disk"
+        sgdisk -n 1:0:+1M   -t 1:ef02 -c 1:"BIOS Boot" "$disk"
+        sgdisk -n 2:0:+4G   -t 2:8200 -c 2:"Swap" "$disk"
+        sgdisk -n 3:0:0     -t 3:8300 -c 3:"Root" "$disk"
+        local swap_part="${disk}2" root_part="${disk}3"
+    fi
+
+    partprobe "$disk" 2>/dev/null || true
+    sleep 2
+
+    info_box "Formateando..."
+    [[ "$uefi_mode" == true ]] && mkfs.fat -F32 "$efi_part"
+    mkswap "$swap_part"
+    mkfs.ext4 -F "$root_part"
+
+    info_box "Montando..."
+    mount "$root_part" /mnt
+    swapon "$swap_part"
+    [[ "$uefi_mode" == true ]] && mkdir -p /mnt/boot/efi && mount "$efi_part" /mnt/boot/efi
+
+    info_box "Instalando sistema base (pacstrap)...\nPuede tardar 5-15 minutos."
+    if command -v reflector &>/dev/null; then
+        reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist 2>/dev/null || true
+    fi
+
+    local base_pkgs=(base base-devel linux linux-firmware networkmanager iwd pipewire pipewire-pulse pipewire-alsa wireplumber git curl wget vim nano sudo mesa xf86-video-fbdev xf86-video-vesa efibootmgr grub dosfstools sddm qt6-svg dialog libnewt)
+
+    if ! pacstrap -K /mnt "${base_pkgs[@]}" 2>&1 | tee /tmp/pacstrap.log; then
+        fatal "pacstrap fallo. Revisa /tmp/pacstrap.log"
+    fi
+
+    if [[ ! -f /mnt/etc/os-release ]]; then
+        fatal "pacstrap fallo: no se encontro /mnt/etc/os-release"
+    fi
+
+    info_box "Configurando sistema..."
+    genfstab -U /mnt >> /mnt/etc/fstab
+
+    # Variables seguras para chroot
+    mkdir -p /mnt/tmp
+    cat > /mnt/tmp/pi-linux-vars.sh <<EOF
+HOSTNAME='$(printf '%q' "$hostname")'
+USERNAME='$(printf '%q' "$username")'
+USERPASS='$(printf '%q' "$userpass")'
+TIMEZONE='$(printf '%q' "$timezone")'
+LOCALE='$(printf '%q' "$locale")'
+KEYMAP='$(printf '%q' "$keymap")'
+EOF
+
+    arch-chroot /mnt /bin/bash <<'CHROOT_EOF'
+set -e
+source /tmp/pi-linux-vars.sh
+
+echo "$HOSTNAME" > /etc/hostname
+
+cat > /etc/hosts <<'EOF'
+127.0.0.1   localhost
+127.0.1.1   $HOSTNAME
+::1         localhost ip6-localhost ip6-loopback
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters
+EOF
+
+echo "LANG=$LOCALE" > /etc/locale.conf
+echo "$LOCALE UTF-8" >> /etc/locale.gen 2>/dev/null || true
+locale-gen 2>/dev/null || true
+
+echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+hwclock --systohc
+
+echo "root:root" | chpasswd
+
+if ! id "$USERNAME" &>/dev/null; then
+    useradd -m -G wheel,audio,video,storage,optical,network,users -s /bin/bash "$USERNAME"
+fi
+echo "$USERNAME:$USERPASS" | chpasswd
+
+echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/10-pi-linux
+chmod 440 /etc/sudoers.d/10-pi-linux
+
+systemctl enable NetworkManager
+systemctl enable sddm
+
+mkdir -p /etc/mkinitcpio.conf.d
+cat > /etc/mkinitcpio.conf.d/pi-linux.conf <<'EOF'
+MODULES=(nvme vmd thunderbolt xhci_hcd xhci_pci ehci_hcd ohci_hcd usb_storage uas usbhid ahci sd_mod sr_mod)
+EOF
+mkinitcpio -P
+
+rm -f /tmp/pi-linux-vars.sh
+CHROOT_EOF
+
+    generate_unattended "$DESKTOP_ENV" "$RICE" "$GPU_TYPE" "$SOFTWARE" "$username" "$hostname" "$timezone" "$locale" "$keymap"
+    copy_pi_linux_to_target "/mnt"
+
+    # Bootloader
+    info_box "Instalando bootloader..."
+    if [[ "$uefi_mode" == true ]]; then
+        arch-chroot /mnt /bin/bash <<'UEFI_EOF'
+set -e
+bootctl install
+
+cat > /boot/loader/loader.conf <<'EOF'
+default arch.conf
+timeout 3
+console-mode max
+editor no
+EOF
+
+ROOT_UUID=$(findmnt -fno UUID /)
+
+cat > /boot/loader/entries/arch.conf <<EOF
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options root=UUID=${ROOT_UUID} rw quiet splash
+EOF
+
+cat > /boot/loader/entries/arch-fallback.conf <<EOF
+title   Arch Linux (fallback)
+linux   /vmlinuz-linux
+initrd  /initramfs-linux-fallback.img
+options root=UUID=${ROOT_UUID} rw
+EOF
+UEFI_EOF
+    else
+        arch-chroot /mnt /bin/bash <<BIOS_EOF
+set -e
+grub-install --target=i386-pc --recheck "$disk"
+grub-mkconfig -o /boot/grub/grub.cfg
+BIOS_EOF
+    fi
+
+    umount -R /mnt 2>/dev/null || true
+    swapoff -a 2>/dev/null || true
+
+    msg "Instalacion base completada.\n\nEn el primer arranque, Pi-Linux instalara automaticamente:\n• $DESKTOP_ENV con tema $RICE\n• Drivers GPU ($GPU_TYPE)\n• Software adicional seleccionado\n\nRetira el USB y reinicia."
+
+    yes_no "¿Reiniciar ahora?" && systemctl reboot
+}
+
+# ============================================
+# MODO 2: ARCHINSTALL (interactivo)
+# ============================================
+
+mode_archinstall() {
+    if ! command -v archinstall &>/dev/null; then
+        fatal "archinstall no esta disponible en este entorno."
+    fi
+
+    msg "Modo archinstall:\n\n1. Selecciona tus opciones de Pi-Linux (DE, rice, software)\n2. Luego se abrira archinstall para que configures disco, usuario, etc.\n3. Al finalizar, Pi-Linux se aplicara automaticamente."
+
+    configure_pi_linux_options
+
+    if ! yes_no "¿Abrir archinstall ahora?\n\nConfigura disco, particiones, usuario y contraseña en el asistente de Arch."; then
+        return 1
+    fi
+
+    # Ejecutar archinstall interactivo
+    archinstall
+
+    msg "archinstall ha finalizado.\n\nAhora necesitamos montar el sistema instalado para aplicar Pi-Linux."
+
+    # Detectar particiones
+    clear
+    echo ""
+    echo "=== Discos y particiones ==="
+    lsblk -f
+    echo ""
+    echo "Introduce la particion ROOT donde instalaste Arch (ej: /dev/sda3):"
+    read -rp "> " root_part
+
+    if [[ -z "$root_part" || ! -b "$root_part" ]]; then
+        fatal "Particion no valida: $root_part"
+    fi
+
+    echo "¿Hay particion EFI? (deja vacio si no):"
+    read -rp "> " efi_part
+
+    mount "$root_part" /mnt || fatal "No se pudo montar $root_part"
+    [[ -n "$efi_part" && -b "$efi_part" ]] && mkdir -p /mnt/boot/efi && mount "$efi_part" /mnt/boot/efi
+
+    # Detectar usuario/hostname/etc desde el sistema instalado
+    local username=""
+    local hostname=""
+    local timezone="Europe/Madrid"
+    local locale="es_ES.UTF-8"
+    local keymap="es"
+
+    [[ -f /mnt/etc/hostname ]] && hostname=$(cat /mnt/etc/hostname)
+    [[ -f /mnt/etc/locale.conf ]] && locale=$(grep LANG /mnt/etc/locale.conf | cut -d= -f2 | tr -d '"')
+    [[ -f /mnt/etc/vconsole.conf ]] && keymap=$(grep KEYMAP /mnt/etc/vconsole.conf | cut -d= -f2)
+    [[ -L /mnt/etc/localtime ]] && timezone=$(readlink /mnt/etc/localtime | sed 's|/usr/share/zoneinfo/||')
+
+    # Intentar detectar usuario no-root
+    username=$(awk -F: '$3 >= 1000 && $3 < 65534 {print $1; exit}' /mnt/etc/passwd)
+    [[ -z "$username" ]] && username="pi"
+    [[ -z "$hostname" ]] && hostname="pi-linux"
+
+    generate_unattended "$DESKTOP_ENV" "$RICE" "$GPU_TYPE" "$SOFTWARE" "$username" "$hostname" "$timezone" "$locale" "$keymap"
+    copy_pi_linux_to_target "/mnt"
+
+    umount -R /mnt 2>/dev/null || true
+
+    msg "Pi-Linux configurado correctamente.\n\nEn el primer arranque se instalara automaticamente:\n• $DESKTOP_ENV con tema $RICE\n• Drivers GPU ($GPU_TYPE)\n• Software adicional seleccionado\n\nRetira el USB y reinicia."
+
+    yes_no "¿Reiniciar ahora?" && systemctl reboot
+}
+
+# ============================================
+# MAIN
+# ============================================
+
+main() {
+    if [[ $EUID -ne 0 ]]; then
+        msg "Este instalador debe ejecutarse como root.\n\nEjecuta: sudo pi-linux-easy-install"
+        exit 1
+    fi
+
+    while true; do
+        local choice
+        choice=$(menu "Pi-Linux Installer v2.2\n\nSelecciona el metodo de instalacion:" \
+            "auto" "Pi-Linux Automatico (particionado + pacstrap)" \
+            "archinstall" "Usar archinstall interactivo (recomendado para novatos)" \
+            "exit" "Salir")
+
+        case "$choice" in
+            auto|1)
+                mode_pilinux_auto
+                ;;
+            archinstall|2)
+                mode_archinstall
+                ;;
+            exit|3|""|*)
+                break
+                ;;
+        esac
+    done
+}
+
+main "$@"

@@ -1,8 +1,7 @@
 #!/bin/bash
-# Pi-Linux First Boot Installer v2.0
-# Se ejecuta automáticamente en el primer boot del sistema instalado
+# Pi-Linux First Boot Installer v2.1
+# Se ejecuta automaticamente en el primer boot del sistema instalado
 
-set -e
 set -o pipefail
 
 INSTALL_MARKER="/var/lib/pi-linux-installed"
@@ -10,7 +9,7 @@ REPO_URL="https://github.com/Pinedux/pi-linux.git"
 LOCAL_DIR="/usr/share/pi-linux"
 INSTALL_DIR="/tmp/pi-linux"
 
-# Si ya se completó, salir
+# Si ya se completo, salir
 if [[ -f "$INSTALL_MARKER" ]]; then
     grep -q "STATUS=completed" "$INSTALL_MARKER" 2>/dev/null && exit 0
 fi
@@ -19,31 +18,26 @@ fi
 mkdir -p "$(dirname "$INSTALL_MARKER")"
 echo "STATUS=in_progress" > "$INSTALL_MARKER"
 
-# Trap para capturar errores de set -e y dirigirlos a on_error
-trap 'on_error' ERR
+clear
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "    🥧  Pi-Linux First Boot Installer"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Este sistema tiene Arch Linux base instalado."
+echo "Pi-Linux configurara tu escritorio automaticamente."
+echo ""
 
-# Esperar a que haya red
-info_wait() {
-    echo "[*] Esperando conexión a internet..."
-    for i in {1..60}; do
-        if ping -c 1 archlinux.org &>/dev/null; then
-            echo "[✓] Conexión OK"
-            return 0
-        fi
-        echo "[$i/60] Esperando..."
-        sleep 2
-    done
-    return 1
-}
-
+# Funcion de error
 on_error() {
-    trap '' ERR
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ⚠  La instalación no pudo completarse."
+    echo "  ⚠  La instalacion no pudo completarse."
     echo ""
     echo "  1) Reintentar"
-    echo "  2) Abrir shell para diagnóstico manual"
+    echo "  2) Abrir shell para diagnostico manual"
     echo "  3) Saltar y continuar al login"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     read -rp "Selecciona [1-3]: " choice
@@ -58,58 +52,73 @@ on_error() {
     esac
 }
 
-clear
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "    🥧  Pi-Linux First Boot Installer"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Este sistema tiene Arch Linux base instalado."
-echo "Pi-Linux configurará tu escritorio automáticamente."
-echo ""
-
 # Preferir scripts locales (offline) si existen
-if [[ -d "$LOCAL_DIR" && -f "$LOCAL_DIR/scripts/tui.sh" ]]; then
+if [[ -d "$LOCAL_DIR" && -f "$LOCAL_DIR/pi-linux.sh" ]]; then
     echo "[*] Usando scripts locales (offline)..."
     INSTALL_DIR="$LOCAL_DIR"
 else
     # Verificar red antes de intentar descargar
-    if ! info_wait; then
-        echo "⚠  No hay conexión a internet y no hay scripts locales."
-        echo "   No se puede continuar sin uno de los dos."
-        on_error
-    fi
+    echo "[*] Esperando conexion a internet..."
+    for i in {1..60}; do
+        if ping -c 1 archlinux.org &>/dev/null; then
+            echo "[✓] Conexion OK"
+            break
+        fi
+        echo "[$i/60] Esperando..."
+        sleep 2
+        if [[ $i -eq 60 ]]; then
+            echo "⚠  No hay conexion a internet y no hay scripts locales."
+            on_error
+        fi
+    done
 
     # Clonar repo
     if [[ -d "$INSTALL_DIR" ]]; then
         rm -rf "$INSTALL_DIR"
     fi
-    
+
     echo "[*] Descargando Pi-Linux..."
     if ! timeout 120 git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
-        echo "⚠  No se pudo descargar. Asegúrate de tener internet."
-        echo "   Puedes ejecutar manualmente después:"
-        echo "   bash <(curl -sL https://raw.githubusercontent.com/Pinedux/pi-linux/main/scripts/tui.sh)"
+        echo "⚠  No se pudo descargar. Asegurate de tener internet."
         on_error
     fi
 fi
 
-echo "[*] Iniciando instalador TUI..."
 cd "$INSTALL_DIR" || on_error
-chmod +x scripts/tui.sh
+chmod +x pi-linux.sh 2>/dev/null || true
 
-# Ejecutar TUI
-if bash scripts/tui.sh; then
-    echo "STATUS=completed" > "$INSTALL_MARKER"
-    echo ""
-    echo "✅ Pi-Linux First Boot completado."
-    echo "   Reiniciando en 5 segundos..."
-    echo ""
-    sleep 5
-    systemctl reboot || true
+# Si hay configuracion desatendida, usar modo automatico
+if [[ -f "$INSTALL_DIR/config/unattended.conf" ]]; then
+    echo "[*] Ejecutando instalacion desatendida..."
+    if bash "$INSTALL_DIR/pi-linux.sh" --unattended --yes; then
+        echo "STATUS=completed" > "$INSTALL_MARKER"
+        echo ""
+        echo "✅ Pi-Linux First Boot completado."
+        echo "   Reiniciando en 5 segundos..."
+        sleep 5
+        systemctl reboot || true
+    else
+        echo "⚠  La instalacion desatendida fallo."
+        on_error
+    fi
 else
-    echo "⚠  El instalador TUI falló."
-    on_error
+    # Fallback a TUI interactivo
+    if [[ -f "$INSTALL_DIR/scripts/tui.sh" ]]; then
+        chmod +x "$INSTALL_DIR/scripts/tui.sh"
+        echo "[*] Iniciando instalador TUI..."
+        if bash "$INSTALL_DIR/scripts/tui.sh"; then
+            echo "STATUS=completed" > "$INSTALL_MARKER"
+            echo ""
+            echo "✅ Pi-Linux First Boot completado."
+            echo "   Reiniciando en 5 segundos..."
+            sleep 5
+            systemctl reboot || true
+        else
+            echo "⚠  El instalador TUI fallo."
+            on_error
+        fi
+    else
+        echo "⚠  No se encontro ni unattended.conf ni tui.sh"
+        on_error
+    fi
 fi

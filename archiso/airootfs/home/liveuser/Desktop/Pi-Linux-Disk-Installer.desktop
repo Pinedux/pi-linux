@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Pi-Linux Disk Installer
+Name[es]=Instalador de disco Pi-Linux
+Comment=Install Pi-Linux directly to disk with TUI
+Comment[es]=Instalar Pi-Linux directamente al disco con TUI
+Exec=konsole --hold -e /usr/local/bin/pi-linux-easy-install
+Icon=drive-harddisk-system
+Type=Application
+Terminal=false
+Categories=System;

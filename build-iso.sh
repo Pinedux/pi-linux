@@ -89,9 +89,16 @@ sync_airootfs() {
         cp -v "${src_dir}"/extras/* "${dst_dir}/extras/" 2>/dev/null || true
     fi
 
+    # Sincronizar scripts críticos del live environment
+    echo "[*] Sincronizando scripts del live environment..."
+    cp -v "${src_dir}/scripts/pi-linux-installer" "${PROFILE_DIR}/airootfs/usr/local/bin/pi-linux-installer"
+    cp -v "${src_dir}/scripts/pi-linux-easy-install" "${PROFILE_DIR}/airootfs/usr/local/bin/pi-linux-easy-install"
+
     chmod +x "${dst_dir}/pi-linux.sh"
     chmod +x "${dst_dir}/modules/"*.sh
     chmod +x "${dst_dir}/scripts/"*.sh
+    chmod +x "${PROFILE_DIR}/airootfs/usr/local/bin/"pi-linux-*
+    # customize_airootfs.sh ahora es minimal (solo ajusta permisos); todo el setup live es estático en airootfs
 }
 
 build_iso() {
@@ -110,9 +117,52 @@ build_iso() {
         rm -rf "$WORK_DIR"
     fi
     
-    echo "[*] Inyectando versión ${VERSION} en profiledef.sh..."
-    cp "${PROFILE_DIR}/profiledef.sh" "${PROFILE_DIR}/profiledef.sh.bak"
-    sed -i "s/^iso_version=.*/iso_version=\"${VERSION}\"/" "${PROFILE_DIR}/profiledef.sh"
+    echo "[*] Generando profiledef.sh completo..."
+    cp "${PROFILE_DIR}/profiledef.sh" "${PROFILE_DIR}/profiledef.sh.bak" 2>/dev/null || true
+    cat > "${PROFILE_DIR}/profiledef.sh" << EOF
+#!/usr/bin/env bash
+# shellcheck disable=SC2034
+
+iso_name="pi-linux"
+iso_label="PI_LINUX_\$(date +%Y%m)"
+iso_publisher="Pi Linux Project <https://github.com/Pinedux/pi-linux>"
+iso_application="Pi-Linux Live/Installer"
+iso_version="${VERSION}"
+install_dir="pilinux"
+buildmodes=("iso")
+bootmodes=("bios.syslinux"
+           "uefi.systemd-boot")
+arch="x86_64"
+pacman_conf="pacman.conf"
+airootfs_image_type="squashfs"
+airootfs_image_tool_options=("-comp" "zstd" "-Xcompression-level" "5" "-b" "1M")
+file_permissions=(
+  ["/etc/shadow"]="0:0:400"
+  ["/etc/gshadow"]="0:0:400"
+  ["/usr/local/bin/pi-linux-firstboot"]="0:0:755"
+  ["/usr/local/bin/pi-linux-installer"]="0:0:755"
+  ["/usr/local/bin/pi-linux-installer-desktop"]="0:0:755"
+  ["/usr/local/bin/pi-linux-disk-installer-desktop"]="0:0:755"
+  ["/usr/local/bin/pi-linux-easy-install"]="0:0:755"
+  ["/usr/share/pi-linux/scripts/pi-linux-disk-installer.sh"]="0:0:755"
+  ["/usr/share/pi-linux/scripts/pi-linux-installer"]="0:0:755"
+  ["/usr/share/pi-linux/scripts/tui.sh"]="0:0:755"
+  ["/usr/share/pi-linux/scripts/pi-linux-firstboot.sh"]="0:0:755"
+  ["/usr/share/pi-linux/scripts/download-organizer.sh"]="0:0:755"
+  ["/usr/share/pi-linux/pi-linux.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/00-preinstall.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/01-base.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/02-gpu.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/02-sddm.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/03-desktop.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/04-software.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/04-themes.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/05-software.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/06-hyprland-rice.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/07-keyd-remapper.sh"]="0:0:755"
+  ["/usr/share/pi-linux/modules/08-download-organizer.sh"]="0:0:755"
+)
+EOF
     
     echo "[*] Compilando ISO Pi-Linux v${VERSION} (esto puede tardar 15-30 min)..."
     echo ""

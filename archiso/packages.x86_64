@@ -136,6 +136,7 @@ ttf-fira-code
 # Live Desktop (Plasma + SDDM)
 sddm
 sddm-kcm
+accountsservice
 plasma-desktop
 konsole
 dolphin

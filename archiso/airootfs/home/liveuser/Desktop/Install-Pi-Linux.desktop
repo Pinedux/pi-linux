@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Install Pi-Linux to Disk
+Name[es]=Instalar Pi-Linux en disco
+Comment=Install Arch Linux with Pi-Linux rices
+Comment[es]=Instalar Arch Linux con rices Pi-Linux
+Exec=konsole --hold -e /usr/local/bin/pi-linux-easy-install
+Icon=system-software-install
+Type=Application
+Terminal=false
+Categories=System;

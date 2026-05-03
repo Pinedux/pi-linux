@@ -1,0 +1,3 @@
+#!/bin/bash
+# Wrapper para lanzar pi-linux-easy-install desde el escritorio live
+konsole --hold -e /usr/local/bin/pi-linux-easy-install
